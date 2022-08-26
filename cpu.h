@@ -12,29 +12,29 @@ struct registers {
     //AF, BC, DE, HL pairings
     union {
         struct {
-            uint8_t A;
-            uint8_t F;
+            uint8_t A = 0;
+            uint8_t F = 0;
         };
         uint16_t AF;
     };
     union {
         struct {
-            uint8_t B;
-            uint8_t C;
+            uint8_t B = 0;
+            uint8_t C = 0;
         };
         uint16_t BC;
     };
     union {
         struct {
-            uint8_t D;
-            uint8_t E;
+            uint8_t D = 0;
+            uint8_t E = 0;
         };
         uint16_t DE;
     };
     union {
         struct {
-            uint8_t H;
-            uint8_t L;
+            uint8_t H = 0;
+            uint8_t L = 0;
         };
         uint16_t HL;
     };
@@ -44,15 +44,15 @@ struct flags {
     //N - Subtract Flag (1 if subtraction was performed)
     //H - Half Carry Flag (1 if carry happened from lower to higher nibble)
     //C - Carry Flag (1 if carry happened in last operation)
-    unsigned char Z, N, H, C;
+    unsigned char Z, N, H, C = 0;
 };
 class cpu {
 private:
      registers reg;
      flags flag;
     uint8_t memory[0xFFFF];
-    int pc;
-    int sp;
+    int pc = 0;
+    int sp = 0;
     uint8_t fetch();
     uint16_t fetch16();
     bool getBit(uint8_t reg, int num);

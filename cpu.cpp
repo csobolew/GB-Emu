@@ -66,6 +66,9 @@ void cpu::step() {
         case 0x11:
             reg.DE = fetch16();
             break;
+        case 0x13:
+            reg.DE++;
+            break;
         case 0x1A:
             reg.A = reg.DE;
             break;
@@ -89,6 +92,9 @@ void cpu::step() {
         case 0x77:
             reg.HL = reg.A;
             break;
+        case 0x7B:
+            reg.A = reg.E;
+            break;
         case 0xAF: {
             if ((reg.A ^ reg.A) == 0) {
                 flag.Z = 1;
@@ -106,11 +112,20 @@ void cpu::step() {
                     break;
             }
             break;
+        case 0xCD: //*****
+            sp--;
+            memory[sp--] = pc >> 8;
+            memory[sp] = pc&0x00FF;
+            pc = fetch16();
+            break;
         case 0xE0:
             memory[0xFF00+fetch()] = reg.A;
             break;
         case 0xE2:
             memory[0xFF00+reg.C] = reg.A;
+            break;
+        case 0xFE:
+
             break;
         default:
             cout << "Unknown Opcode " << memory[pc-1] << " at " << pc-1 << endl;
