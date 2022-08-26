@@ -5,7 +5,9 @@
 int main(int argc, char* argv[]) {
     cpu game = cpu();
     game.load(argv);
-    game.step();
+    while(true) {
+        game.step();
+    }
     cout << "test" << endl;
     return 0;
 }

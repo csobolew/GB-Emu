@@ -5,7 +5,4 @@ set(CMAKE_CXX_STANDARD 14)
 
 include_directories(.)
 
-add_executable(GB_Emu
-        cpu.cpp
-        cpu.h
-        main.cpp)
+add_executable(GB_Emu cpu.cpp cpu.h main.cpp)
