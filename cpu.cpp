@@ -15,6 +15,7 @@ void cpu::load(char* argv[]) {
         i++;
     }
     fclose(f);
+    memory[0xFF44] = 0x90;
 }
 void cpu::setZ(uint8_t v) {
     if (v) {
@@ -164,6 +165,12 @@ void cpu::step() {
         case 0x13:
             reg.DE++;
             break;
+        case 0x15:
+            decrement(reg.D);
+            break;
+        case 0x16:
+            reg.D = fetch();
+            break;
         case 0x17: {
             rotateLeftCarry(reg.A);
             break;
@@ -173,6 +180,9 @@ void cpu::step() {
             break;
         case 0x1A:
             reg.A = memory[reg.DE];
+            break;
+        case 0x1D:
+            decrement(reg.E);
             break;
         case 0x1E:
             reg.E = fetch();
@@ -193,6 +203,9 @@ void cpu::step() {
             break;
         case 0x23:
             reg.HL++;
+            break;
+        case 0x24:
+            increment(reg.H);
             break;
         case 0x28: {
             uint8_t val = fetch();
@@ -235,6 +248,26 @@ void cpu::step() {
         case 0x7B:
             reg.A = reg.E;
             break;
+        case 0x7C:
+            reg.A = reg.H;
+            break;
+        case 0x90:
+            setH(((reg.A & 0xf) - (reg.B & 0xf)) & 0x10);
+            reg.A -= reg.B;
+            if (reg.A == 0) {
+                setZ(1);
+            }
+            else {
+                setZ(0);
+            }
+            setN(1);
+            if (reg.A < reg.B) {
+                setC(1);
+            }
+            else {
+                setC(0);
+            }
+            break;
         case 0xAF: {
             if ((reg.A ^ reg.A) == 0) {
                 setZ(1);
@@ -242,6 +275,9 @@ void cpu::step() {
             reg.A = reg.A ^ reg.A;
             break;
         }
+        case 0xBE:
+            compare(reg.A, memory[reg.HL]);
+            break;
         case 0xC1:
             reg.C = memory[sp++];
             reg.B = memory[sp++];
