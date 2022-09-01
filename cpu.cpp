@@ -58,6 +58,7 @@ void cpu::setC(uint8_t v) {
         reg.F = reg.F&0xE;
     }
 }
+
 uint8_t cpu::getC() {
     return reg.F&0x1;
 }
@@ -126,7 +127,7 @@ void cpu::compare(uint8_t reg, uint8_t operand) {
         setZ(0);
     }
     setN(1);
-   setH(((reg & 0xf) - (operand & 0xf)) & 0x10);
+    setH(((reg & 0xf) - (operand & 0xf)) & 0x10);
     if (reg < operand) {
         setC(1);
     }
@@ -134,209 +135,120 @@ void cpu::compare(uint8_t reg, uint8_t operand) {
         setC(0);
     }
 }
-void cpu::step() {
-    switch(fetch()) {
+
+uint8_t cpu::getLower(uint16_t val) {
+    return val&0xFF;
+}
+
+uint8_t cpu::getUpper(uint16_t val) {
+    return val >> 8;
+}
+void cpu::op_LDu16SP() {
+    uint16_t val = fetch16();
+    memory[val] = reg.P;
+    memory[val+1] = reg.S;
+}
+void cpu::op_jumpRel() {
+    pc += fetchSigned();
+}
+bool cpu::getCondition(uint8_t code) {
+    uint8_t temp = (code&0x18) >> 3;
+    switch (temp) {
         case 0x00:
+            if (getZ() == 0) {
+                return true;
+            }
             break;
         case 0x01:
-            fetch16Reg(reg.B, reg.C);
-            break;
-        case 0x04:
-            increment(reg.B);
-            break;
-        case 0x05:
-            decrement(reg.B);
-            break;
-        case 0x06:
-            reg.B = fetch();
-            break;
-        case 0x0D:
-            decrement(reg.C);
-            break;
-        case 0x0E:
-            reg.C = fetch();
-            break;
-        case 0x0C:
-            increment(reg.C);
-            break;
-        case 0x11:
-            fetch16Reg(reg.D, reg.E);
-            break;
-        case 0x13:
-            reg.DE++;
-            break;
-        case 0x15:
-            decrement(reg.D);
-            break;
-        case 0x16:
-            reg.D = fetch();
-            break;
-        case 0x17: {
-            rotateLeftCarry(reg.A);
-            break;
-        }
-        case 0x18:
-            pc += fetchSigned();
-            break;
-        case 0x1A:
-            reg.A = memory[reg.DE];
-            break;
-        case 0x1D:
-            decrement(reg.E);
-            break;
-        case 0x1E:
-            reg.E = fetch();
-            break;
-        case 0x20: {
-            int8_t val = fetchSigned();
-            if (getZ() == 0) {
-                pc += val;
-            }
-            break;
-        }
-        case 0x21:
-            fetch16Reg(reg.H, reg.L);
-            break;
-        case 0x22:
-            memory[reg.HL] = reg.A;
-            reg.HL++;
-            break;
-        case 0x23:
-            reg.HL++;
-            break;
-        case 0x24:
-            increment(reg.H);
-            break;
-        case 0x28: {
-            uint8_t val = fetch();
             if (getZ() == 1) {
-                pc += val;
+                return true;
+            }
+        case 0x02:
+            if (getC() == 0) {
+                return true;
             }
             break;
-        }
-        case 0x2E:
-            reg.L = fetch();
-            break;
-        case 0x31: {
-            sp = fetch16();
-            break;
-        }
-        case 0x32:
-            memory[reg.HL--] = reg.A;
-            break;
-        case 0x3D:
-            decrement(reg.A);
-            break;
-        case 0x3E:
-            reg.A = fetch();
-            break;
-        case 0x47:
-            reg.B = reg.A;
-            break;
-        case 0x4F:
-            reg.C = reg.A;
-            break;
-        case 0x57:
-            reg.D = reg.A;
-            break;
-        case 0x67:
-            reg.H = reg.A;
-            break;
-        case 0x77:
-            reg.HL = reg.A;
-            break;
-        case 0x7B:
-            reg.A = reg.E;
-            break;
-        case 0x7C:
-            reg.A = reg.H;
-            break;
-        case 0x90:
-            setH(((reg.A & 0xf) - (reg.B & 0xf)) & 0x10);
-            reg.A -= reg.B;
-            if (reg.A == 0) {
-                setZ(1);
-            }
-            else {
-                setZ(0);
-            }
-            setN(1);
-            if (reg.A < reg.B) {
-                setC(1);
-            }
-            else {
-                setC(0);
+        case 0x03:
+            if (getC() == 1) {
+                return true;
             }
             break;
-        case 0xAF: {
-            if ((reg.A ^ reg.A) == 0) {
-                setZ(1);
+    }
+    return false;
+}
+void cpu::op_jumpRelCond(uint8_t val) {
+    if (getCondition(val)) {
+        op_jumpRel();
+    }
+}
+uint8_t& cpu::get1R16L(uint8_t val) {
+    switch((val&0x30) >> 4) {
+        case 0x0:
+            return reg.C;
+            break;
+        case 0x1:
+            return reg.E;
+            break;
+        case 0x2:
+            return reg.L;
+            break;
+        case 0x3:
+            return reg.P;
+            break;
             }
-            reg.A = reg.A ^ reg.A;
+    }
+uint8_t& cpu::get1R16U(uint8_t val) {
+    switch((val&0x30) >> 4) {
+        case 0x0:
+            return reg.B;
             break;
-        }
-        case 0xBE:
-            compare(reg.A, memory[reg.HL]);
+        case 0x1:
+            return reg.D;
             break;
-        case 0xC1:
-            reg.C = memory[sp++];
-            reg.B = memory[sp++];
+        case 0x2:
+            return reg.H;
             break;
-        case 0xC5:
-            sp--;
-            memory[sp--] = reg.B;
-            memory[sp] = reg.C;
+        case 0x3:
+            return reg.S;
             break;
-        case 0xC9: {
-            uint8_t temp1 = memory[sp++];
-            uint8_t temp2 = memory[sp++];
-            pc = (((uint16_t) temp2 << 8) | temp1);
-            break;
-        }
-        //CB-prefix codes
-        case 0xCB:
-            switch(fetch()) {
-                case 0x11: {
-                    rotateLeftCarry(reg.C);
+    }
+}
+void cpu::op_ldr16u16(uint8_t val) {
+    get1R16L(val) = fetch();
+    get1R16U(val) = fetch();
+}
+void cpu::step() {
+    uint8_t val = fetch();
+    switch((val&0b11000000) >> 6) { //First 2
+        case 0x00:
+            switch(val&0b00000111) { //Last 3
+                case 0b000: // NOP
+                    switch((val&0b00111000) >> 3) { //Middle 3
+                        case 0b000: //NOP
+                            break;
+                        case 0b001: //LD (u16), SP
+                            op_LDu16SP();
+                            break;
+                        case 0b010: //STOP
+                            exit(1);
+                            break;
+                        case 0b011: //JR (unconditional)
+                            op_jumpRel();
+                            break;
+                        default: //JR (conditional)
+                            op_jumpRelCond(val);
+                            break;
+                    }
                     break;
-                }
-                case 0x7C:
-                    setZ(!getBit(reg.H, 7));
-                    setN(0);
-                    setH(1);
+                case 0b001:
+                    switch((val&0b00001000) >> 3) {
+                        case 0b0: //LD r16 (group 1), u16
+                            op_ldr16u16(val);
+                            break;
+                    }
                     break;
-                default:
-                    cout << "Unknown Opcode " << hex << (unsigned int)memory[pc-1] << " at 0x" << pc-1 << endl;
-                    exit(1);
             }
             break;
-        case 0xCD: {
-            uint16_t temp = fetch16();
-            sp--;
-            memory[sp--] = pc >> 8;
-            memory[sp] = pc&0x00FF;
-            pc = temp;
-            break;
-            }
-        case 0xE0:
-            memory[0xFF00+fetch()] = reg.A;
-            break;
-        case 0xE2:
-            memory[0xFF00+reg.C] = reg.A;
-            break;
-        case 0xEA:
-            memory[fetch16()] = reg.A;
-            break;
-        case 0xF0:
-            reg.A = memory[0xFF00+fetch()];
-            break;
-        case 0xFE: {
-            compare(reg.A, fetch());
-            break;
-        }
-        default:
-            cout << "Unknown Opcode " << hex << (unsigned int)memory[pc-1] << " at 0x" << pc-1 << endl;
-            exit(1);
     }
 }
 

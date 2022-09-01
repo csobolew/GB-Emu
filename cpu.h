@@ -40,6 +40,13 @@ struct registers {
         };
         uint16_t HL;
     };
+    union {
+        struct {
+            uint8_t P = 0;
+            uint8_t S = 0;
+        };
+        uint16_t SP;
+    };
 };
 
 class cpu {
@@ -47,7 +54,6 @@ private:
     registers reg;
     uint8_t memory[0xFFFF] = {};
     int pc = 0;
-    int sp = 0;
     uint8_t fetch();
     uint16_t fetch16();
     void fetch16Reg(uint8_t &reg1, uint8_t &reg2);
@@ -64,7 +70,17 @@ private:
     void increment(uint8_t &reg);
     void rotateLeftCarry(uint8_t &reg);
     int8_t fetchSigned();
+    uint8_t getLower(uint16_t val);
+    uint8_t getUpper(uint16_t val);
     void compare(uint8_t reg, uint8_t operand);
+
+    void op_jumpRel();
+    void op_ldr16u16(uint8_t code);
+    uint8_t& get1R16L(uint8_t code);
+    uint8_t& get1R16U(uint8_t code);
+    void op_jumpRelCond(uint8_t code);
+    void op_LDu16SP ();
+    bool getCondition(uint8_t code);
 public:
     void load(char* argv[]);
     void step();
