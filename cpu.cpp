@@ -476,28 +476,126 @@ void cpu::op_aluar8(uint8_t val) {
     }
 }
 void cpu::op_aluaddA(uint8_t val) {
+    setH(((reg.A & 0xf) + (getR8L(val) & 0xf)) > 0xf);
+    if ((reg.A + getR8L(val)) > 0xFF) {
+        setC(1);
+    }
+    else {
+        setC(0);
+    }
     reg.A += getR8L(val);
+    if (reg.A == 0) {
+        setZ(1);
+    }
+    else {
+        setZ(0);
+    }
+    setN(0);
 }
 void cpu::op_aluadcA(uint8_t val) {
-
+    setH(((reg.A & 0xf) + (getR8L(val) & 0xf) + getC()) > 0xf);
+    uint8_t temp = getC();
+    if ((reg.A + getR8L(val) + getC()) > 0xFF) {
+        setC(1);
+    }
+    else {
+        setC(0);
+    }
+    reg.A += getR8L(val) + temp;
+    if (reg.A == 0) {
+        setZ(1);
+    }
+    else {
+        setZ(0);
+    }
+    setN(0);
 }
 void cpu::op_alusubA(uint8_t val) {
-
+    setH(((reg.A & 0xf) - (getR8L(val) & 0xf)) & 0x10);
+    if (reg.A < getR8L(val)) {
+        setC(1);
+    }
+    else {
+        setC(0);
+    }
+    reg.A -= getR8L(val);
+    if (reg.A == 0) {
+        setZ(1);
+    }
+    else {
+        setZ(0);
+    }
+    setN(1);
 }
 void cpu::op_alusbcA(uint8_t val) {
-
+    setH(((reg.A & 0xf) - (getR8L(val) & 0xf) - getC()) & 0x10);
+    uint8_t temp = getC();
+    if (reg.A < (getR8L(val) + getC())) {
+        setC(1);
+    }
+    else {
+        setC(0);
+    }
+    reg.A -= getR8L(val) + temp;
+    if (reg.A == 0) {
+        setZ(1);
+    }
+    else {
+        setZ(0);
+    }
+    setN(1);
 }
 void cpu::op_aluandA(uint8_t val) {
-
+    reg.A = reg.A & getR8L(val);
+    if (reg.A == 0) {
+        setZ(1);
+    }
+    else {
+        setZ(0);
+    }
+    setN(0);
+    setH(1);
+    setC(0);
 }
 void cpu::op_aluxorA(uint8_t val) {
-
+    reg.A = reg.A ^ getR8L(val);
+    if (reg.A == 0) {
+        setZ(1);
+    }
+    else {
+        setZ(0);
+    }
+    setN(0);
+    setH(0);
+    setC(0);
 }
 void cpu::op_aluorA(uint8_t val) {
-
+    reg.A = reg.A | getR8L(val);
+    if (reg.A == 0) {
+        setZ(1);
+    }
+    else {
+        setZ(0);
+    }
+    setN(0);
+    setH(0);
+    setC(0);
 }
 void cpu::op_alucpA(uint8_t val) {
-
+    if (reg.A == getR8L(val)) {
+        setZ(1);
+    }
+    else {
+        setZ(0);
+    }
+    setN(1);
+    setH(((reg.A & 0xf) - (getR8L(val) & 0xf)) & 0x10);
+    if (reg.A < getR8L(val)) {
+        setC(1);
+    }
+    else {
+        setC(0);
+    }
 }
 void cpu::step() {
     uint8_t val = fetch();
@@ -578,6 +676,9 @@ void cpu::step() {
             break;
         case 0b10: //ALU A, r8
             op_aluar8(val);
+            break;
+        case 0b11:
+            //Switch statement last 3
             break;
     }
 }
