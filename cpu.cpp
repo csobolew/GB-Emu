@@ -329,6 +329,52 @@ void cpu::op_DECr8(uint8_t val) {
         setZ(0);
     }
 }
+void cpu::op_ldr8u8(uint8_t val) {
+    getR8(val) = fetch();
+}
+void cpu::op_group1(uint8_t val) {
+    switch((val&0b00111000) >> 3) {
+        case 0b000: //RLCA
+            op_rlca();
+            break;
+        case 0b001: //RRCA
+            break;
+        case 0b010: //RLA
+            op_rla();
+            break;
+        case 0b011: //RRA
+            break;
+        case 0b100: //DAA
+            break;
+        case 0b101: //CPL
+            break;
+        case 0b110: //SCF
+            break;
+        case 0b111: //CCF
+            break;
+    }
+}
+void cpu::op_rlca() {
+    uint8_t temp = (reg.A & 0x80) >> 7;
+    reg.A = reg.A << 1;
+    if (temp == 1) {
+        reg.A = reg.A | 0x1;
+    }
+    setN(0);
+    setH(0);
+    setZ(0);
+}
+void cpu::op_rla() {
+    uint8_t temp = (reg.A & 0x80) >> 7;
+    reg.A = reg.A << 1;
+    if (getC() == 1) {
+        reg.A = reg.A | 0x1;
+    }
+    setN(0);
+    setH(0);
+    setZ(0);
+    setC(temp);
+}
 void cpu::step() {
     uint8_t val = fetch();
     switch((val&0b11000000) >> 6) { //First 2
@@ -389,7 +435,10 @@ void cpu::step() {
                     op_DECr8(val);
                     break;
                 case 0b110: //LD r8, u8
-
+                    op_ldr8u8(val);
+                    break;
+                case 0b111: //opcode group 1
+                    op_group1(val);
                     break;
             }
             break;

@@ -91,6 +91,10 @@ private:
     void op_DECr16(uint8_t code);
     void op_INCr8(uint8_t code);
     void op_DECr8(uint8_t code);
+    void op_ldr8u8(uint8_t code);
+    void op_group1(uint8_t code);
+    void op_rlca();
+    void op_rla();
 public:
     void load(char* argv[]);
     void step();
