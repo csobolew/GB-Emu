@@ -66,9 +66,6 @@ private:
     uint8_t getH();
     void setC(uint8_t v);
     uint8_t getC();
-    void decrement(uint8_t &reg);
-    void increment(uint8_t &reg);
-    void rotateLeftCarry(uint8_t &reg);
     int8_t fetchSigned();
     uint8_t getLower(uint16_t val);
     uint8_t getUpper(uint16_t val);
@@ -81,6 +78,7 @@ private:
     uint16_t& get1R16(uint8_t code);
     uint16_t& get2R16(uint8_t code);
     uint8_t& getR8(uint8_t code);
+    uint8_t& getR8L(uint8_t code);
     void op_jumpRelCond(uint8_t code);
     void op_addHLr16(uint8_t code);
     void op_LDu16SP ();
@@ -88,13 +86,29 @@ private:
     void op_ldr16A(uint8_t code);
     void op_ldAr16(uint8_t code);
     void op_INCr16(uint8_t code);
+    void op_ldr8r8(uint8_t code);
     void op_DECr16(uint8_t code);
     void op_INCr8(uint8_t code);
     void op_DECr8(uint8_t code);
     void op_ldr8u8(uint8_t code);
     void op_group1(uint8_t code);
     void op_rlca();
+    void op_aluaddA(uint8_t code);
+    void op_aluadcA(uint8_t code);
+    void op_alusubA(uint8_t code);
+    void op_alusbcA(uint8_t code);
+    void op_aluandA(uint8_t code);
+    void op_aluxorA(uint8_t code);
+    void op_aluorA(uint8_t code);
+    void op_alucpA(uint8_t code);
+    void op_aluar8(uint8_t code);
+    void op_rrca();
+    void op_rra();
+    void op_scf();
+    void op_daa();
     void op_rla();
+    void op_ccf();
+    void op_cpl();
 public:
     void load(char* argv[]);
     void step();

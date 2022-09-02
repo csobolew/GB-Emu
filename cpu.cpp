@@ -72,19 +72,7 @@ int8_t cpu::fetchSigned() {
     pc++;
     return temp;
 }
-void cpu::rotateLeftCarry(uint8_t &reg) {
-    uint8_t temp = (reg & 0x80) >> 7;
-    reg = reg << 1;
-    if (getC() == 1) {
-        reg = reg | 0x1;
-    }
-    setN(0);
-    setH(0);
-    if (reg == 0) {
-        setZ(1);
-    }
-    setC(temp);
-}
+
 uint16_t cpu::fetch16() {
     uint8_t temp1 = fetch();
     uint8_t temp2 = fetch();
@@ -96,28 +84,6 @@ void cpu::fetch16Reg(uint8_t &reg1, uint8_t &reg2) {
 }
 bool cpu::getBit(uint8_t reg, int num) {
     return ((reg >> (num-1))&0x1);
-}
-void cpu::decrement(uint8_t &reg) {
-    setH((((reg) & 0xf) - (1 & 0xf)) & 0x10);
-    reg--;
-    setN(1);
-    if (reg == 0) {
-        setZ(1);
-    }
-    else {
-        setZ(0);
-    }
-}
-void cpu::increment(uint8_t &reg) {
-    setH((((reg) & 0xf) + (1 & 0xf)) & 0x10);
-    reg++;
-    setN(0);
-    if (reg == 0) {
-        setZ(1);
-    }
-    else {
-        setZ(0);
-    }
 }
 void cpu::compare(uint8_t reg, uint8_t operand) {
     if (reg == operand) {
@@ -273,6 +239,34 @@ uint8_t& cpu::getR8(uint8_t val) {
             break;
     }
 }
+uint8_t& cpu::getR8L(uint8_t val) {
+    switch(val&0b00000111) {
+        case 0b000:
+            return reg.B;
+            break;
+        case 0b001:
+            return reg.C;
+            break;
+        case 0b010:
+            return reg.D;
+            break;
+        case 0b011:
+            return reg.E;
+            break;
+        case 0b100:
+            return reg.H;
+            break;
+        case 0b101:
+            return reg.L;
+            break;
+        case 0b110:
+            return memory[reg.HL];
+            break;
+        case 0b111:
+            return reg.A;
+            break;
+    }
+}
 void cpu::op_ldr16u16(uint8_t val) {
     get1R16L(val) = fetch();
     get1R16U(val) = fetch();
@@ -311,7 +305,7 @@ void cpu::op_INCr8(uint8_t val) {
     setH(((getR8(val) & 0xF) + (1 & 0xF)) > 0xF);
     getR8(val)++;
     setN(0);
-    if (get1R16(val) == 0) {
+    if (getR8(val) == 0) {
         setZ(1);
     }
     else {
@@ -332,27 +326,104 @@ void cpu::op_DECr8(uint8_t val) {
 void cpu::op_ldr8u8(uint8_t val) {
     getR8(val) = fetch();
 }
+void cpu::op_ldr8r8(uint8_t val) {
+    getR8(val) = getR8L(val);
+}
 void cpu::op_group1(uint8_t val) {
     switch((val&0b00111000) >> 3) {
         case 0b000: //RLCA
             op_rlca();
             break;
         case 0b001: //RRCA
+            op_rrca();
             break;
         case 0b010: //RLA
             op_rla();
             break;
         case 0b011: //RRA
+            op_rra();
             break;
         case 0b100: //DAA
+            op_daa();
             break;
         case 0b101: //CPL
+            op_cpl();
             break;
         case 0b110: //SCF
+            op_scf();
             break;
         case 0b111: //CCF
+            op_ccf();
             break;
     }
+}
+void cpu::op_ccf() {
+    setN(0);
+    setH(0);
+    if (getC() == 0) {
+        setC(1);
+    }
+    else if (getC() == 1) {
+        setC(0);
+    }
+}
+void cpu::op_scf() {
+    setN(0);
+    setH(0);
+    setC(1);
+}
+void cpu::op_cpl() {
+    reg.A = ~reg.A;
+    setN(1);
+    setH(1);
+}
+void cpu::op_daa() {
+    if (getN() == 0) {
+        if ((getC() == 1) || (reg.A > 0x99)) {
+            reg.A += 0x60;
+            setC(1);
+        }
+        if ((getH() == 1) || ((reg.A&0x0F) > 0x09)) {
+            reg.A += 0x60;
+        }
+    }
+    else {
+        if (getC() == 1) {
+            reg.A -= 0x60;
+        }
+        if (getH() == 1) {
+            reg.A -= 0x60;
+        }
+    }
+    if (reg.A == 0) {
+        setZ(1);
+    }
+    else {
+        setZ(0);
+    }
+    setH(0);
+}
+void cpu::op_rrca() {
+    uint8_t temp = (reg.A & 0x1);
+    reg.A = reg.A >> 1;
+    if (temp == 1) {
+        reg.A = reg.A | 0b10000000;
+    }
+    setN(0);
+    setH(0);
+    setZ(0);
+    setC(temp);
+}
+void cpu::op_rra() {
+    uint8_t temp = (reg.A & 0x1);
+    reg.A = reg.A >> 1;
+    if (getC() == 1) {
+        reg.A = reg.A | 0b10000000;
+    }
+    setN(0);
+    setH(0);
+    setZ(0);
+    setC(temp);
 }
 void cpu::op_rlca() {
     uint8_t temp = (reg.A & 0x80) >> 7;
@@ -363,6 +434,7 @@ void cpu::op_rlca() {
     setN(0);
     setH(0);
     setZ(0);
+    setC(temp);
 }
 void cpu::op_rla() {
     uint8_t temp = (reg.A & 0x80) >> 7;
@@ -375,10 +447,62 @@ void cpu::op_rla() {
     setZ(0);
     setC(temp);
 }
+void cpu::op_aluar8(uint8_t val) {
+    switch((val&0b00111000) >> 3) {
+        case 0b000: //ADD
+            op_aluaddA(val);
+            break;
+        case 0b001: //ADC
+            op_aluadcA(val);
+            break;
+        case 0b010: //SUB
+            op_alusubA(val);
+            break;
+        case 0b011: //SBC
+            op_alusbcA(val);
+            break;
+        case 0b100: //AND
+            op_aluandA(val);
+            break;
+        case 0b101: //XOR
+            op_aluxorA(val);
+            break;
+        case 0b110: //OR
+            op_aluorA(val);
+            break;
+        case 0b111: //CP
+            op_alucpA(val);
+            break;
+    }
+}
+void cpu::op_aluaddA(uint8_t val) {
+    reg.A += getR8L(val);
+}
+void cpu::op_aluadcA(uint8_t val) {
+
+}
+void cpu::op_alusubA(uint8_t val) {
+
+}
+void cpu::op_alusbcA(uint8_t val) {
+
+}
+void cpu::op_aluandA(uint8_t val) {
+
+}
+void cpu::op_aluxorA(uint8_t val) {
+
+}
+void cpu::op_aluorA(uint8_t val) {
+
+}
+void cpu::op_alucpA(uint8_t val) {
+
+}
 void cpu::step() {
     uint8_t val = fetch();
     switch((val&0b11000000) >> 6) { //First 2
-        case 0x00:
+        case 0b00:
             switch(val&0b00000111) { //Last 3
                 case 0b000:
                     switch((val&0b00111000) >> 3) { //Middle 3
@@ -441,6 +565,19 @@ void cpu::step() {
                     op_group1(val);
                     break;
             }
+            break;
+        case 0b01:
+            switch(val&0b00111111) {
+                case 0b110110: //HALT - Not implemented
+                    exit(5);
+                    break;
+                default: //LD r8, r8
+                    op_ldr8r8(val);
+                    break;
+            }
+            break;
+        case 0b10: //ALU A, r8
+            op_aluar8(val);
             break;
     }
 }
