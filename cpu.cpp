@@ -213,16 +213,35 @@ uint8_t& cpu::get1R16U(uint8_t val) {
             break;
     }
 }
+uint16_t& cpu::get1R16(uint8_t val) {
+    switch((val&0b00110000) >> 4) {
+        case 0b00:
+            return reg.BC;
+            break;
+        case 0b01:
+            return reg.DE;
+            break;
+        case 0b10:
+            return reg.HL;
+            break;
+        case 0b11:
+            return reg.SP;
+            break;
+    }
+}
 void cpu::op_ldr16u16(uint8_t val) {
     get1R16L(val) = fetch();
     get1R16U(val) = fetch();
+}
+void cpu::op_addHLr16(uint8_t val) {
+    reg.HL += get1R16(val);
 }
 void cpu::step() {
     uint8_t val = fetch();
     switch((val&0b11000000) >> 6) { //First 2
         case 0x00:
             switch(val&0b00000111) { //Last 3
-                case 0b000: // NOP
+                case 0b000:
                     switch((val&0b00111000) >> 3) { //Middle 3
                         case 0b000: //NOP
                             break;
@@ -245,7 +264,13 @@ void cpu::step() {
                         case 0b0: //LD r16 (group 1), u16
                             op_ldr16u16(val);
                             break;
+                        case 0b1: //ADD HL, r16
+                            op_addHLr16(val);
+                            break;
                     }
+                    break;
+                case 0b010:
+
                     break;
             }
             break;
