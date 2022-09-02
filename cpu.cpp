@@ -18,7 +18,7 @@ void cpu::load(char* argv[]) {
     memory[0xFF44] = 0x90;
 }
 void cpu::setZ(uint8_t v) {
-    if (v) {
+    if (v == 1) {
         reg.F = reg.F | 0x8;
     }
     else {
@@ -29,7 +29,7 @@ uint8_t cpu::getZ() {
     return reg.F>>3;
 }
 void cpu::setN(uint8_t v) {
-    if (v) {
+    if (v == 1) {
         reg.F = reg.F | 0x4;
     }
     else {
@@ -40,7 +40,7 @@ uint8_t cpu::getN() {
     return (reg.F>>2)&0x1;
 }
 void cpu::setH(uint8_t v) {
-    if (v) {
+    if (v == 1) {
         reg.F = reg.F | 0x2;
     }
     else {
@@ -51,7 +51,7 @@ uint8_t cpu::getH() {
     return (reg.F>>1)&0x1;
 }
 void cpu::setC(uint8_t v) {
-    if (v) {
+    if (v == 1) {
         reg.F = reg.F | 0x1;
     }
     else {
@@ -229,12 +229,105 @@ uint16_t& cpu::get1R16(uint8_t val) {
             break;
     }
 }
+uint16_t& cpu::get2R16(uint8_t val) {
+    switch((val&0b00110000) >> 4) {
+        case 0b00:
+            return reg.BC;
+            break;
+        case 0b01:
+            return reg.DE;
+            break;
+        case 0b10:
+            return reg.HL;
+            break;
+        case 0b11:
+            return reg.HL;
+            break;
+    }
+}
+uint8_t& cpu::getR8(uint8_t val) {
+    switch((val&0b00111000) >> 3) {
+        case 0b000:
+            return reg.B;
+            break;
+        case 0b001:
+            return reg.C;
+            break;
+        case 0b010:
+            return reg.D;
+            break;
+        case 0b011:
+            return reg.E;
+            break;
+        case 0b100:
+            return reg.H;
+            break;
+        case 0b101:
+            return reg.L;
+            break;
+        case 0b110:
+            return memory[reg.HL];
+            break;
+        case 0b111:
+            return reg.A;
+            break;
+    }
+}
 void cpu::op_ldr16u16(uint8_t val) {
     get1R16L(val) = fetch();
     get1R16U(val) = fetch();
 }
 void cpu::op_addHLr16(uint8_t val) {
+    setH(((reg.HL & 0xFFF) + (get1R16(val) & 0xFFF)) > 0xFFF);
+    if ((reg.HL + get1R16(val)) > 0xFFFF) {
+        setC(1);
+    }
+    else {
+        setC(0);
+    }
     reg.HL += get1R16(val);
+    setN(0);
+
+}
+void cpu::op_ldr16A(uint8_t val) {
+    memory[get2R16(val)] = reg.A;
+    if (((val&0b00110000) >> 4) == 0b11) {
+        reg.HL--;
+    }
+}
+void cpu::op_ldAr16(uint8_t val) {
+    reg.A = memory[get2R16(val)];
+    if (((val&0b00110000) >> 4) == 0b11) {
+        reg.HL--;
+    }
+}
+void cpu::op_INCr16(uint8_t val) {
+    get1R16(val)++;
+}
+void cpu::op_DECr16(uint8_t val) {
+    get1R16(val)--;
+}
+void cpu::op_INCr8(uint8_t val) {
+    setH(((getR8(val) & 0xF) + (1 & 0xF)) > 0xF);
+    getR8(val)++;
+    setN(0);
+    if (get1R16(val) == 0) {
+        setZ(1);
+    }
+    else {
+        setZ(0);
+    }
+}
+void cpu::op_DECr8(uint8_t val) {
+    setH(((getR8(val) & 0xf) - (1 & 0xf)) < 0);
+    getR8(val)--;
+    setN(1);
+    if (getR8(val) == 0) {
+        setZ(1);
+    }
+    else {
+        setZ(0);
+    }
 }
 void cpu::step() {
     uint8_t val = fetch();
@@ -264,12 +357,38 @@ void cpu::step() {
                         case 0b0: //LD r16 (group 1), u16
                             op_ldr16u16(val);
                             break;
-                        case 0b1: //ADD HL, r16
+                        case 0b1: //ADD HL, r16 -- Flags
                             op_addHLr16(val);
                             break;
                     }
                     break;
                 case 0b010:
+                    switch((val&0b00001000) >> 3) {
+                        case 0b0: //LD (r16), A (group 2)
+                            op_ldr16A(val);
+                            break;
+                        case 0b1: //LD A,(r16) (group 2)
+                            op_ldAr16(val);
+                            break;
+                    }
+                    break;
+                case 0b011:
+                    switch((val&0b00001000) >> 3) {
+                        case 0b0: //INC r16
+                            op_INCr16(val);
+                            break;
+                        case 0b1: //DEC r16
+                            op_DECr16(val);
+                            break;
+                    }
+                    break;
+                case 0b100: //INC r8
+                    op_INCr8(val);
+                    break;
+                case 0b101: //DEC r8
+                    op_DECr8(val);
+                    break;
+                case 0b110: //LD r8, u8
 
                     break;
             }

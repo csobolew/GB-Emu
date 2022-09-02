@@ -79,10 +79,18 @@ private:
     uint8_t& get1R16L(uint8_t code);
     uint8_t& get1R16U(uint8_t code);
     uint16_t& get1R16(uint8_t code);
+    uint16_t& get2R16(uint8_t code);
+    uint8_t& getR8(uint8_t code);
     void op_jumpRelCond(uint8_t code);
     void op_addHLr16(uint8_t code);
     void op_LDu16SP ();
     bool getCondition(uint8_t code);
+    void op_ldr16A(uint8_t code);
+    void op_ldAr16(uint8_t code);
+    void op_INCr16(uint8_t code);
+    void op_DECr16(uint8_t code);
+    void op_INCr8(uint8_t code);
+    void op_DECr8(uint8_t code);
 public:
     void load(char* argv[]);
     void step();
