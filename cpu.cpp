@@ -83,7 +83,7 @@ void cpu::fetch16Reg(uint8_t &reg1, uint8_t &reg2) {
     reg1 = fetch();
 }
 bool cpu::getBit(uint8_t reg, int num) {
-    return ((reg >> (num-1))&0x1);
+    return ((reg >> (num))&0x1);
 }
 void cpu::compare(uint8_t reg, uint8_t operand) {
     if (reg == operand) {
@@ -114,27 +114,27 @@ void cpu::op_LDu16SP() {
     memory[val] = reg.P;
     memory[val+1] = reg.S;
 }
-void cpu::op_jumpRel() {
-    pc += fetchSigned();
+void cpu::op_jumpRel(int8_t val) {
+    pc += val;
 }
 bool cpu::getCondition(uint8_t code) {
-    uint8_t temp = (code&0x18) >> 3;
+    uint8_t temp = (code&0b00011000) >> 3;
     switch (temp) {
-        case 0x00:
+        case 0b00:
             if (getZ() == 0) {
                 return true;
             }
             break;
-        case 0x01:
+        case 0b01:
             if (getZ() == 1) {
                 return true;
             }
-        case 0x02:
+        case 0b10:
             if (getC() == 0) {
                 return true;
             }
             break;
-        case 0x03:
+        case 0b11:
             if (getC() == 1) {
                 return true;
             }
@@ -143,38 +143,39 @@ bool cpu::getCondition(uint8_t code) {
     return false;
 }
 void cpu::op_jumpRelCond(uint8_t val) {
+    int8_t temp = fetchSigned();
     if (getCondition(val)) {
-        op_jumpRel();
+        op_jumpRel(temp);
     }
 }
 uint8_t& cpu::get1R16L(uint8_t val) {
-    switch((val&0x30) >> 4) {
-        case 0x0:
+    switch((val&0b00110000) >> 4) {
+        case 0b00:
             return reg.C;
             break;
-        case 0x1:
+        case 0b01:
             return reg.E;
             break;
-        case 0x2:
+        case 0b10:
             return reg.L;
             break;
-        case 0x3:
+        case 0b11:
             return reg.P;
             break;
             }
     }
 uint8_t& cpu::get1R16U(uint8_t val) {
-    switch((val&0x30) >> 4) {
-        case 0x0:
+    switch((val&0b00110000) >> 4) {
+        case 0b00:
             return reg.B;
             break;
-        case 0x1:
+        case 0b01:
             return reg.D;
             break;
-        case 0x2:
+        case 0b10:
             return reg.H;
             break;
-        case 0x3:
+        case 0b11:
             return reg.S;
             break;
     }
@@ -285,13 +286,19 @@ void cpu::op_addHLr16(uint8_t val) {
 }
 void cpu::op_ldr16A(uint8_t val) {
     memory[get2R16(val)] = reg.A;
-    if (((val&0b00110000) >> 4) == 0b11) {
+    if (((val&0b00110000) >> 4) == 0b10) {
+        reg.HL++;
+    }
+    else if (((val&0b00110000) >> 4) == 0b11) {
         reg.HL--;
     }
 }
 void cpu::op_ldAr16(uint8_t val) {
     reg.A = memory[get2R16(val)];
-    if (((val&0b00110000) >> 4) == 0b11) {
+    if (((val&0b00110000) >> 4) == 0b10) {
+        reg.HL++;
+    }
+    else if (((val&0b00110000) >> 4) == 0b11) {
         reg.HL--;
     }
 }
@@ -597,6 +604,463 @@ void cpu::op_alucpA(uint8_t val) {
         setC(0);
     }
 }
+void cpu::returnStack() {
+    uint8_t temp1 = memory[reg.SP++];
+    uint8_t temp2 = memory[reg.SP++];
+    pc = (((uint16_t)temp2 << 8) | temp1);
+}
+void cpu::op_retcond(uint8_t val) {
+    if (getCondition(val)) {
+        returnStack();
+    }
+}
+void cpu::op_ldffuA() {
+    memory[0xFF00+fetch()] = reg.A;
+}
+void cpu::op_addspi8() {
+    reg.SP += fetchSigned();
+}
+void cpu::op_ldAffu() {
+    reg.A = memory[0xFF00+fetch()];
+}
+void cpu::op_ldhlspi() {
+    reg.HL = reg.SP + fetchSigned();
+}
+uint8_t& cpu::get3R16L(uint8_t val) {
+    switch((val&0b00110000) >> 4) {
+        case 0b00:
+            return reg.C;
+            break;
+        case 0b01:
+            return reg.E;
+            break;
+        case 0b10:
+            return reg.L;
+            break;
+        case 0b11:
+            return reg.F;
+            break;
+    }
+}
+uint8_t& cpu::get3R16U(uint8_t val) {
+    switch((val&0b00110000) >> 4) {
+        case 0b00:
+            return reg.B;
+            break;
+        case 0b01:
+            return reg.D;
+            break;
+        case 0b10:
+            return reg.H;
+            break;
+        case 0b11:
+            return reg.A;
+            break;
+    }
+}
+void cpu::op_popr16(uint8_t val) {
+    get3R16L(val) = memory[reg.SP++];
+    get3R16U(val) = memory[reg.SP++];
+}
+void cpu::op_reti() {
+    returnStack();
+    op_ei();
+}
+void cpu::op_jphl() {
+    pc = reg.HL;
+}
+void cpu::op_ldsphl() {
+    reg.SP = reg.HL;
+}
+void cpu::op_ldffcA() {
+    memory[0xFF00+reg.C] = reg.A;
+}
+void cpu::op_ldAffc() {
+    reg.A = memory[0xFF00+reg.C];
+}
+void cpu::op_ldu16A() {
+    memory[fetch16()] = reg.A;
+}
+void cpu::op_ldAu16() {
+    reg.A = memory[fetch16()];
+}
+void cpu::jump16(uint16_t val) {
+    pc = val;
+}
+void cpu::op_jpcond(uint8_t val) {
+        uint16_t temp = fetch16();
+    if (getCondition(val)) {
+        jump16(temp);
+    }
+}
+void cpu::op_di() {
+    IME = 0;
+}
+void cpu::op_ei() {
+    IME = 1;
+}
+void cpu::op_rlc(uint8_t val) {
+    uint8_t temp = (getR8L(val) & 0x80) >> 7;
+    getR8L(val) = getR8L(val) << 1;
+    if (temp == 1) {
+        getR8L(val) = getR8L(val) | 0x1;
+    }
+    setN(0);
+    setH(0);
+    if (getR8L(val) == 0) {
+        setZ(1);
+    }
+    else {
+        setZ(0);
+    }
+    setC(temp);
+}
+void cpu::op_rl(uint8_t val) {
+    uint8_t temp = (getR8L(val) & 0x80) >> 7;
+    getR8L(val) = getR8L(val) << 1;
+    if (getC() == 1) {
+        getR8L(val) = getR8L(val) | 0x1;
+    }
+    setN(0);
+    setH(0);
+    if (getR8L(val) == 0) {
+        setZ(1);
+    }
+    else {
+        setZ(0);
+    }
+    setC(temp);
+}
+void cpu::op_rr(uint8_t val) {
+    uint8_t temp = (getR8L(val) & 0x1);
+    getR8L(val) = getR8L(val) >> 1;
+    if (getC() == 1) {
+        getR8L(val) = getR8L(val) | 0b10000000;
+    }
+    setN(0);
+    setH(0);
+    if (getR8L(val) == 0) {
+        setZ(1);
+    }
+    else {
+        setZ(0);
+    }
+    setC(temp);
+}
+void cpu::op_rrc(uint8_t val) {
+    uint8_t temp = (getR8L(val) & 0x1);
+    getR8L(val) = getR8L(val) >> 1;
+    if (temp == 1) {
+        getR8L(val) = getR8L(val) | 0b10000000;
+    }
+    setN(0);
+    setH(0);
+    if (getR8L(val) == 0) {
+        setZ(1);
+    }
+    else {
+        setZ(0);
+    }
+    setC(temp);
+}
+void cpu::op_sla(uint8_t val) {
+    setC(getR8L(val)&0b10000000 >> 7);
+    getR8L(val) = getR8L(val) << 1;
+    setH(0);
+    setN(0);
+    if (getR8L(val) == 0) {
+        setZ(1);
+    }
+    else {
+        setZ(0);
+    }
+}
+void cpu::op_sra(uint8_t val) {
+    setC(getR8L(val)&0b00000001);
+    getR8L(val) = getR8L(val) >> 1;
+    if (((getR8L(val)&0b01000000) >> 6 == 1)) {
+        getR8L(val) = getR8L(val) | 0b10000000;
+    }
+    setH(0);
+    setN(0);
+    if (getR8L(val) == 0) {
+        setZ(1);
+    }
+    else {
+        setZ(0);
+    }
+}
+void cpu::op_srl(uint8_t val) {
+    setC(getR8L(val)&0b00000001);
+    getR8L(val) = getR8L(val) >> 1;
+    setH(0);
+    setN(0);
+    if (getR8L(val) == 0) {
+        setZ(1);
+    }
+    else {
+        setZ(0);
+    }
+}
+void cpu::op_swap(uint8_t val) {
+    uint8_t temp = getR8L(val);
+    getR8L(val) = ((temp&0b00001111)<<4) | (temp>>4);
+    if (getR8L(val) == 0) {
+        setZ(1);
+    }
+    else {
+        setZ(0);
+    }
+    setC(0);
+    setN(0);
+    setH(0);
+}
+void cpu::op_bit(uint8_t val) {
+    setZ(!getBit(getR8L(val), ((val&0b00111000) >> 3)));
+    setN(0);
+    setH(1);
+}
+void cpu::resetBit(uint8_t& reg, uint8_t num) {
+    switch(num) {
+        case 0:
+            reg = reg&0b11111110;
+            break;
+        case 1:
+            reg = reg&0b11111101;
+            break;
+        case 2:
+            reg = reg&0b11111011;
+            break;
+        case 3:
+            reg = reg&0b11110111;
+            break;
+        case 4:
+            reg = reg&0b11101111;
+            break;
+        case 5:
+            reg = reg&0b11011111;
+            break;
+        case 6:
+            reg = reg&0b10111111;
+            break;
+        case 7:
+            reg = reg&0b01111111;
+            break;
+    }
+}
+void cpu::op_res(uint8_t val) {
+    resetBit(getR8L(val), ((val&0b00111000) >> 3));
+}
+void cpu::setBit(uint8_t& reg, uint8_t num) {
+    switch(num) {
+        case 0:
+            reg = reg | 0b00000001;
+            break;
+        case 1:
+            reg = reg | 0b00000010;
+            break;
+        case 2:
+            reg = reg | 0b00000100;
+            break;
+        case 3:
+            reg = reg | 0b00001000;
+            break;
+        case 4:
+            reg = reg | 0b00010000;
+            break;
+        case 5:
+            reg = reg | 0b00100000;
+            break;
+        case 6:
+            reg = reg | 0b01000000;
+            break;
+        case 7:
+            reg = reg | 0b10000000;
+            break;
+    }
+}
+void cpu::op_set(uint8_t val) {
+    setBit(getR8L(val), ((val&0b00111000) >> 3));
+}
+void cpu::call(uint16_t val) {
+    uint16_t temp = val;
+    reg.SP--;
+    memory[reg.SP--] = pc >> 8;
+    memory[reg.SP] = pc&0x00FF;
+    pc = temp;
+}
+void cpu::op_callcond(uint8_t val) {
+    uint16_t temp = fetch16();
+    if (getCondition(val)) {
+        call(temp);
+    }
+}
+void cpu::op_pushr16(uint8_t val) {
+    reg.SP--;
+    memory[reg.SP--] = get3R16U(val);
+    memory[reg.SP] = get3R16L(val);
+}
+void cpu::op_callu16() {
+    call(fetch16());
+}
+void cpu::op_aluaddu8() {
+    uint8_t temp = fetch();
+    setH(((reg.A & 0xf) + (temp & 0xf)) > 0xf);
+    if ((reg.A + temp) > 0xFF) {
+        setC(1);
+    }
+    else {
+        setC(0);
+    }
+    reg.A += temp;
+    if (reg.A == 0) {
+        setZ(1);
+    }
+    else {
+        setZ(0);
+    }
+    setN(0);
+}
+void cpu::op_aluadcu8() {
+    uint8_t temp = fetch();
+    setH(((reg.A & 0xf) + (temp & 0xf) + getC()) > 0xf);
+    uint8_t temp2 = getC();
+    if ((reg.A + temp + getC()) > 0xFF) {
+        setC(1);
+    }
+    else {
+        setC(0);
+    }
+    reg.A += temp + temp2;
+    if (reg.A == 0) {
+        setZ(1);
+    }
+    else {
+        setZ(0);
+    }
+    setN(0);
+}
+void cpu::op_alusubu8() {
+    uint8_t temp = fetch();
+    setH(((reg.A & 0xf) - (temp & 0xf)) & 0x10);
+    if (reg.A < temp) {
+        setC(1);
+    }
+    else {
+        setC(0);
+    }
+    reg.A -= temp;
+    if (reg.A == 0) {
+        setZ(1);
+    }
+    else {
+        setZ(0);
+    }
+    setN(1);
+}
+void cpu::op_alusbcu8() {
+    uint8_t temp = fetch();
+    setH(((reg.A & 0xf) - (temp & 0xf) - getC()) & 0x10);
+    uint8_t temp2 = getC();
+    if (reg.A < (temp + getC())) {
+        setC(1);
+    }
+    else {
+        setC(0);
+    }
+    reg.A -= temp + temp2;
+    if (reg.A == 0) {
+        setZ(1);
+    }
+    else {
+        setZ(0);
+    }
+    setN(1);
+}
+void cpu::op_aluandu8() {
+    uint8_t temp = fetch();
+    reg.A = reg.A & getR8L(temp);
+    if (reg.A == 0) {
+        setZ(1);
+    }
+    else {
+        setZ(0);
+    }
+    setN(0);
+    setH(1);
+    setC(0);
+}
+void cpu::op_aluxoru8() {
+    uint8_t temp = fetch();
+    reg.A = reg.A ^ temp;
+    if (reg.A == 0) {
+        setZ(1);
+    }
+    else {
+        setZ(0);
+    }
+    setN(0);
+    setH(0);
+    setC(0);
+}
+void cpu::op_aluoru8() {
+    uint8_t temp = fetch();
+    reg.A = reg.A | fetch();
+    if (reg.A == 0) {
+        setZ(1);
+    }
+    else {
+        setZ(0);
+    }
+    setN(0);
+    setH(0);
+    setC(0);
+}
+void cpu::op_alucpu8() {
+    uint8_t temp = fetch();
+    if (reg.A == temp) {
+        setZ(1);
+    }
+    else {
+        setZ(0);
+    }
+    setN(1);
+    setH(((reg.A & 0xf) - (temp & 0xf)) & 0x10);
+    if (reg.A < temp) {
+        setC(1);
+    }
+    else {
+        setC(0);
+    }
+}
+void cpu::op_aluau8(uint8_t val) {
+    switch((val&0b00111000) >> 3) {
+        case 0b000:
+            op_aluaddu8();
+            break;
+        case 0b001:
+            op_aluadcu8();
+            break;
+        case 0b010:
+            op_alusubu8();
+            break;
+        case 0b011:
+            op_alusbcu8();
+            break;
+        case 0b100:
+            op_aluandu8();
+            break;
+        case 0b101:
+            op_aluxoru8();
+            break;
+        case 0b110:
+            op_aluoru8();
+            break;
+        case 0b111:
+            op_alucpu8();
+            break;
+    }
+}
 void cpu::step() {
     uint8_t val = fetch();
     switch((val&0b11000000) >> 6) { //First 2
@@ -613,7 +1077,7 @@ void cpu::step() {
                             exit(1);
                             break;
                         case 0b011: //JR (unconditional)
-                            op_jumpRel();
+                            op_jumpRel(fetchSigned());
                             break;
                         default: //JR (conditional)
                             op_jumpRelCond(val);
@@ -678,7 +1142,154 @@ void cpu::step() {
             op_aluar8(val);
             break;
         case 0b11:
-            //Switch statement last 3
+            switch(val&0b00000111) {
+                case 0b000:
+                    switch((val&0b00100000) >> 5) {
+                        case 0b0: //RET condition
+                            op_retcond(val);
+                            break;
+                        case 0b1:
+                            switch((val&0b00011000) >> 3) {
+                                case 0b00: //LD (FF00+u8), A
+                                    op_ldffuA();
+                                    break;
+                                case 0b01: //ADD SP,i8
+                                    op_addspi8();
+                                    break;
+                                case 0b10: //LD A, (FF00+u8)
+                                    op_ldAffu();
+                                    break;
+                                case 0b11: //LD HL, SP+i8
+                                    op_ldhlspi();
+                                    break;
+                            }
+                            break;
+                    }
+                    break;
+                case 0b001:
+                    switch((val&0b00001000) >> 3) {
+                        case 0b0: //POP r16
+                            op_popr16(val);
+                            break;
+                        case 0b1: //opcode set
+                            switch((val&0b00110000) >> 4) {
+                                case 0b00: //RET
+                                    returnStack();
+                                    break;
+                                case 0b01: //RETI
+                                    op_reti();
+                                    break;
+                                case 0b10: //JP HL
+                                    op_jphl();
+                                    break;
+                                case 0b11: //LD SP,HL
+                                    op_ldsphl();
+                                    break;
+                            }
+                            break;
+                    }
+                    break;
+                case 0b010:
+                    switch((val&0b00100000) >> 5) {
+                        case 0b0: //JP condition
+                            op_jpcond(val);
+                            break;
+                        case 0b1:
+                            switch((val&0b00011000) >> 3) {
+                                case 0b00: //LD (FF00+C), A
+                                    op_ldffcA();
+                                    break;
+                                case 0b01: //LD (u16), A
+                                    op_ldu16A();
+                                    break;
+                                case 0b10: //LD A, (FF00+C)
+                                    op_ldAffc();
+                                    break;
+                                case 0b11: //LD A,(u16)
+                                    op_ldAu16();
+                                    break;
+                            }
+                            break;
+                    }
+                    break;
+                case 0b011: //opcode set
+                    switch((val&0b00111000) >> 3) {
+                        case 0b000: //JP u16
+                            jump16(fetch16());
+                            break;
+                        case 0b001: //(CB Prefix)
+                            switch((val&0b11000000) >> 6) {
+                                case 0b00: //Shifts/rotates
+                                    switch((val&0b00111000) >> 3) {
+                                        case 0b000: //RLC
+                                            op_rlc(val);
+                                            break;
+                                        case 0b001: //RRC
+                                            op_rrc(val);
+                                            break;
+                                        case 0b010: //RL
+                                            op_rl(val);
+                                            break;
+                                        case 0b011: //RR
+                                            op_rr(val);
+                                            break;
+                                        case 0b100: //SLA
+                                            op_sla(val);
+                                            break;
+                                        case 0b101: //SRA
+                                            op_sra(val);
+                                            break;
+                                        case 0b110: //SWAP
+                                            op_swap(val);
+                                            break;
+                                        case 0b111: //SRL
+                                            op_srl(val);
+                                            break;
+                                    }
+                                    break;
+                                case 0b01: //BIT bit, r8
+                                    op_bit(val);
+                                    break;
+                                case 0b10: //RES bit, r8
+                                    op_res(val);
+                                    break;
+                                case 0b11: //SET bit, r8
+                                    op_set(val);
+                                    break;
+                            }
+                            break;
+                        case 0b110: //DI
+                            op_di();
+                            break;
+                        case 0b111: //EI
+                            op_ei();
+                            break;
+                        default:
+                            cout << "Illegal Opcode" << endl;
+                            exit(9);
+                            break;
+                    }
+                    break;
+                case 0b100: //CALL condition
+                    op_callcond(val);
+                    break;
+                case 0b101:
+                    switch((val&0b00001000) >> 3) {
+                        case 0b0: //PUSH r16
+                            op_pushr16(val);
+                            break;
+                        case 0b1: //CALL u16
+                            op_callu16();
+                            break;
+                    }
+                    break;
+                case 0b110: //ALU a,u8
+                    op_aluau8(val);
+                    break;
+                case 0b111: //RST
+                    call((val&0b00111000) >> 3);
+                    break;
+            }
             break;
     }
 }
