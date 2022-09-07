@@ -5,7 +5,7 @@
 #include "cpu.h"
 
 void cpu::load(char* argv[]) {
-    FILE* f = fopen("gbboot.gb", "rb");
+    FILE* f = fopen("gbb.gb", "rb");
     if (f == nullptr) {
         cout << "Couldn't open file";
         exit(1);
@@ -17,50 +17,53 @@ void cpu::load(char* argv[]) {
     fclose(f);
     memory[0xFF44] = 0x90;
 }
+void cpu::log(ofstream& outfile) {
+    outfile << uppercase << hex << "A: " << (int)reg.A << " F: " << (int)reg.F << " B: " << (int)reg.B << " C: " << (int)reg.C << " D: " << (int)reg.D << " E: " << (int)reg.E << " H: " << (int)reg.H << " L: " << (int)reg.L << " SP: " << (int)reg.SP << " PC: " << (int)pc << " (" << (int)memory[pc] << " " << (int)memory[pc+1] << " " << (int)memory[pc+2] << " " << (int)memory[pc+3] << ")" << endl;
+}
 void cpu::setZ(uint8_t v) {
     if (v == 1) {
-        reg.F = reg.F | 0x8;
+        reg.F = reg.F | 0b10000000;
     }
     else {
-        reg.F = reg.F&0x7;
+        reg.F = reg.F&0b01111111;
     }
 }
 uint8_t cpu::getZ() const {
-    return reg.F>>3;
+    return reg.F>>7;
 }
 void cpu::setN(uint8_t v) {
     if (v == 1) {
-        reg.F = reg.F | 0x4;
+        reg.F = reg.F | 0b01000000;
     }
     else {
-        reg.F = reg.F&0xB;
+        reg.F = reg.F&0b10111111;
     }
 }
 uint8_t cpu::getN() const {
-    return (reg.F>>2)&0x1;
+    return (reg.F>>6)&0x1;
 }
 void cpu::setH(uint8_t v) {
     if (v == 1) {
-        reg.F = reg.F | 0x2;
+        reg.F = reg.F | 0b00100000;
     }
     else {
-        reg.F = reg.F&0xD;
+        reg.F = reg.F&0b11011111;
     }
 }
 uint8_t cpu::getH() const {
-    return (reg.F>>1)&0x1;
+    return (reg.F>>5)&0x1;
 }
 void cpu::setC(uint8_t v) {
     if (v == 1) {
-        reg.F = reg.F | 0x1;
+        reg.F = reg.F | 0b00010000;
     }
     else {
-        reg.F = reg.F&0xE;
+        reg.F = reg.F&0b11101111;
     }
 }
 
 uint8_t cpu::getC() const {
-    return reg.F&0x1;
+    return (reg.F>>4)&0x1;
 }
 uint8_t cpu::fetch() {
     uint8_t temp = memory[pc];
@@ -618,6 +621,7 @@ uint8_t& cpu::get3R16U(uint8_t val) {
 void cpu::op_popr16(uint8_t val) {
     get3R16L(val) = memory[reg.SP++];
     get3R16U(val) = memory[reg.SP++];
+    reg.F = reg.F&0xF0;
 }
 void cpu::op_reti() {
     returnStack();
@@ -860,6 +864,9 @@ void cpu::op_callcond(uint8_t val) {
 }
 void cpu::op_pushr16(uint8_t val) {
     reg.SP--;
+    if (reg.BC == 0x1200) {
+        cout << "hi" << endl;
+    }
     memory[reg.SP--] = get3R16U(val);
     memory[reg.SP] = get3R16L(val);
 }
@@ -1025,7 +1032,12 @@ void cpu::op_aluau8(uint8_t val) {
     }
 }
 void cpu::step() {
-    uint8_t val = fetch();
+    if (memory[0xff02] == 0x81) {
+        char c = memory[0xff01];
+        printf("%c", c);
+        memory[0xff02] = 0x0;
+    }
+        uint8_t val = fetch();
     switch((val&0b11000000) >> 6) { //First 2
         case 0b00:
             switch(val&0b00000111) { //Last 3
@@ -1227,7 +1239,6 @@ void cpu::step() {
                             break;
                         default:
                             cout << "Illegal Opcode" << endl;
-                            exit(9);
                     }
                     break;
                 case 0b100: //CALL condition

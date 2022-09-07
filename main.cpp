@@ -4,8 +4,10 @@
 #include "cpu.h"
 int main(int argc, char* argv[]) {
     cpu game = cpu();
+    ofstream outfile("log.txt");
     game.load(argv);
     while(true) {
+        game.log(outfile);
         game.step();
     }
     cout << "test" << endl;
