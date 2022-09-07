@@ -25,7 +25,7 @@ void cpu::setZ(uint8_t v) {
         reg.F = reg.F&0x7;
     }
 }
-uint8_t cpu::getZ() {
+uint8_t cpu::getZ() const {
     return reg.F>>3;
 }
 void cpu::setN(uint8_t v) {
@@ -36,7 +36,7 @@ void cpu::setN(uint8_t v) {
         reg.F = reg.F&0xB;
     }
 }
-uint8_t cpu::getN() {
+uint8_t cpu::getN() const {
     return (reg.F>>2)&0x1;
 }
 void cpu::setH(uint8_t v) {
@@ -47,7 +47,7 @@ void cpu::setH(uint8_t v) {
         reg.F = reg.F&0xD;
     }
 }
-uint8_t cpu::getH() {
+uint8_t cpu::getH() const {
     return (reg.F>>1)&0x1;
 }
 void cpu::setC(uint8_t v) {
@@ -59,7 +59,7 @@ void cpu::setC(uint8_t v) {
     }
 }
 
-uint8_t cpu::getC() {
+uint8_t cpu::getC() const {
     return reg.F&0x1;
 }
 uint8_t cpu::fetch() {
@@ -68,7 +68,7 @@ uint8_t cpu::fetch() {
     return temp;
 }
 int8_t cpu::fetchSigned() {
-    int8_t temp = memory[pc];
+    auto temp = (int8_t)memory[pc];
     pc++;
     return temp;
 }
@@ -78,36 +78,8 @@ uint16_t cpu::fetch16() {
     uint8_t temp2 = fetch();
     return (((uint16_t)temp2 << 8) | temp1);
 }
-void cpu::fetch16Reg(uint8_t &reg1, uint8_t &reg2) {
-    reg2 = fetch();
-    reg1 = fetch();
-}
-bool cpu::getBit(uint8_t reg, int num) {
-    return ((reg >> (num))&0x1);
-}
-void cpu::compare(uint8_t reg, uint8_t operand) {
-    if (reg == operand) {
-        setZ(1);
-    }
-    else {
-        setZ(0);
-    }
-    setN(1);
-    setH(((reg & 0xf) - (operand & 0xf)) & 0x10);
-    if (reg < operand) {
-        setC(1);
-    }
-    else {
-        setC(0);
-    }
-}
-
-uint8_t cpu::getLower(uint16_t val) {
-    return val&0xFF;
-}
-
-uint8_t cpu::getUpper(uint16_t val) {
-    return val >> 8;
+bool cpu::getBit(uint8_t regi, int num) {
+    return ((regi >> (num))&0x1);
 }
 void cpu::op_LDu16SP() {
     uint16_t val = fetch16();
@@ -139,6 +111,9 @@ bool cpu::getCondition(uint8_t code) {
                 return true;
             }
             break;
+        default:
+            cout << "Unknown condition" << endl;
+            exit(15);
     }
     return false;
 }
@@ -152,120 +127,104 @@ uint8_t& cpu::get1R16L(uint8_t val) {
     switch((val&0b00110000) >> 4) {
         case 0b00:
             return reg.C;
-            break;
         case 0b01:
             return reg.E;
-            break;
         case 0b10:
             return reg.L;
-            break;
         case 0b11:
             return reg.P;
-            break;
+        default:
+            cout << "Unknown r16" << endl;
+            exit(20);
             }
     }
 uint8_t& cpu::get1R16U(uint8_t val) {
     switch((val&0b00110000) >> 4) {
         case 0b00:
             return reg.B;
-            break;
         case 0b01:
             return reg.D;
-            break;
         case 0b10:
             return reg.H;
-            break;
         case 0b11:
             return reg.S;
-            break;
+        default:
+            cout << "Unknown r16" << endl;
+            exit(21);
     }
 }
 uint16_t& cpu::get1R16(uint8_t val) {
     switch((val&0b00110000) >> 4) {
         case 0b00:
             return reg.BC;
-            break;
         case 0b01:
             return reg.DE;
-            break;
         case 0b10:
             return reg.HL;
-            break;
         case 0b11:
             return reg.SP;
-            break;
+        default:
+            cout << "Unknown r16" << endl;
+            exit(22);
     }
 }
 uint16_t& cpu::get2R16(uint8_t val) {
     switch((val&0b00110000) >> 4) {
         case 0b00:
             return reg.BC;
-            break;
         case 0b01:
             return reg.DE;
-            break;
-        case 0b10:
+        case 0b10 ... 0b11:
             return reg.HL;
-            break;
-        case 0b11:
-            return reg.HL;
-            break;
+        default:
+            cout << "Unknown r16" << endl;
+            exit(23);
     }
 }
 uint8_t& cpu::getR8(uint8_t val) {
     switch((val&0b00111000) >> 3) {
         case 0b000:
             return reg.B;
-            break;
         case 0b001:
             return reg.C;
-            break;
         case 0b010:
             return reg.D;
-            break;
         case 0b011:
             return reg.E;
-            break;
         case 0b100:
             return reg.H;
-            break;
         case 0b101:
             return reg.L;
-            break;
         case 0b110:
             return memory[reg.HL];
-            break;
         case 0b111:
             return reg.A;
-            break;
+        default:
+            cout << "Unknown r8" << endl;
+            exit(24);
     }
 }
 uint8_t& cpu::getR8L(uint8_t val) {
     switch(val&0b00000111) {
         case 0b000:
             return reg.B;
-            break;
         case 0b001:
             return reg.C;
-            break;
         case 0b010:
             return reg.D;
-            break;
         case 0b011:
             return reg.E;
-            break;
         case 0b100:
             return reg.H;
-            break;
         case 0b101:
             return reg.L;
-            break;
         case 0b110:
             return memory[reg.HL];
-            break;
         case 0b111:
             return reg.A;
-            break;
+        default:
+            cout << "Unknown r8" << endl;
+            exit(25);
     }
 }
 void cpu::op_ldr16u16(uint8_t val) {
@@ -630,32 +589,30 @@ uint8_t& cpu::get3R16L(uint8_t val) {
     switch((val&0b00110000) >> 4) {
         case 0b00:
             return reg.C;
-            break;
         case 0b01:
             return reg.E;
-            break;
         case 0b10:
             return reg.L;
-            break;
         case 0b11:
             return reg.F;
-            break;
+        default:
+            cout << "Unknown r16" << endl;
+            exit(26);
     }
 }
 uint8_t& cpu::get3R16U(uint8_t val) {
     switch((val&0b00110000) >> 4) {
         case 0b00:
             return reg.B;
-            break;
         case 0b01:
             return reg.D;
-            break;
         case 0b10:
             return reg.H;
-            break;
         case 0b11:
             return reg.A;
-            break;
+        default:
+            cout << "Unknown r16" << endl;
+            exit(27);
     }
 }
 void cpu::op_popr16(uint8_t val) {
@@ -820,63 +777,69 @@ void cpu::op_bit(uint8_t val) {
     setN(0);
     setH(1);
 }
-void cpu::resetBit(uint8_t& reg, uint8_t num) {
+void cpu::resetBit(uint8_t& regi, uint8_t num) {
     switch(num) {
         case 0:
-            reg = reg&0b11111110;
+            regi = regi&0b11111110;
             break;
         case 1:
-            reg = reg&0b11111101;
+            regi = regi&0b11111101;
             break;
         case 2:
-            reg = reg&0b11111011;
+            regi = regi&0b11111011;
             break;
         case 3:
-            reg = reg&0b11110111;
+            regi = regi&0b11110111;
             break;
         case 4:
-            reg = reg&0b11101111;
+            regi = regi&0b11101111;
             break;
         case 5:
-            reg = reg&0b11011111;
+            regi = regi&0b11011111;
             break;
         case 6:
-            reg = reg&0b10111111;
+            regi = regi&0b10111111;
             break;
         case 7:
-            reg = reg&0b01111111;
+            regi = regi&0b01111111;
             break;
+        default:
+            cout << "Unknown bit" << endl;
+            exit(30);
     }
 }
 void cpu::op_res(uint8_t val) {
     resetBit(getR8L(val), ((val&0b00111000) >> 3));
 }
-void cpu::setBit(uint8_t& reg, uint8_t num) {
+void cpu::setBit(uint8_t& regi, uint8_t num) {
     switch(num) {
         case 0:
-            reg = reg | 0b00000001;
+            regi = regi | 0b00000001;
             break;
         case 1:
-            reg = reg | 0b00000010;
+            regi = regi | 0b00000010;
             break;
         case 2:
-            reg = reg | 0b00000100;
+            regi = regi | 0b00000100;
             break;
         case 3:
-            reg = reg | 0b00001000;
+            regi = regi | 0b00001000;
             break;
         case 4:
-            reg = reg | 0b00010000;
+            regi = regi | 0b00010000;
             break;
         case 5:
-            reg = reg | 0b00100000;
+            regi = regi | 0b00100000;
             break;
         case 6:
-            reg = reg | 0b01000000;
+            regi = regi | 0b01000000;
             break;
         case 7:
-            reg = reg | 0b10000000;
+            regi = regi | 0b10000000;
             break;
+        default:
+            cout << "Unknown bit" << endl;
+            exit(31);
     }
 }
 void cpu::op_set(uint8_t val) {
@@ -1005,7 +968,7 @@ void cpu::op_aluxoru8() {
 }
 void cpu::op_aluoru8() {
     uint8_t temp = fetch();
-    reg.A = reg.A | fetch();
+    reg.A = reg.A | temp;
     if (reg.A == 0) {
         setZ(1);
     }
@@ -1075,7 +1038,6 @@ void cpu::step() {
                             break;
                         case 0b010: //STOP
                             exit(1);
-                            break;
                         case 0b011: //JR (unconditional)
                             op_jumpRel(fetchSigned());
                             break;
@@ -1132,7 +1094,6 @@ void cpu::step() {
             switch(val&0b00111111) {
                 case 0b110110: //HALT - Not implemented
                     exit(5);
-                    break;
                 default: //LD r8, r8
                     op_ldr8r8(val);
                     break;
@@ -1267,7 +1228,6 @@ void cpu::step() {
                         default:
                             cout << "Illegal Opcode" << endl;
                             exit(9);
-                            break;
                     }
                     break;
                 case 0b100: //CALL condition
@@ -1294,6 +1254,6 @@ void cpu::step() {
     }
 }
 
-cpu::cpu() {}
+cpu::cpu() = default;
 
 registers::registers() {}

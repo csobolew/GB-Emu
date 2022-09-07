@@ -57,20 +57,16 @@ private:
     uint8_t IME = 0;
     uint8_t fetch();
     uint16_t fetch16();
-    void fetch16Reg(uint8_t &reg1, uint8_t &reg2);
-    bool getBit(uint8_t reg, int num);
+    static bool getBit(uint8_t reg, int num);
     void setZ(uint8_t v);
-    uint8_t getZ();
+    uint8_t getZ() const;
     void setN(uint8_t v);
-    uint8_t getN();
+    uint8_t getN() const;
     void setH(uint8_t v);
-    uint8_t getH();
+    uint8_t getH() const;
     void setC(uint8_t v);
-    uint8_t getC();
+    uint8_t getC() const;
     int8_t fetchSigned();
-    uint8_t getLower(uint16_t val);
-    uint8_t getUpper(uint16_t val);
-    void compare(uint8_t reg, uint8_t operand);
 
     void op_jumpRel(int8_t val);
     void op_ldr16u16(uint8_t code);
@@ -140,8 +136,8 @@ private:
     void op_swap(uint8_t code);
     void op_bit(uint8_t code);
     void op_res(uint8_t code);
-    void resetBit(uint8_t& reg, uint8_t code);
-    void setBit(uint8_t& reg, uint8_t code);
+    static void resetBit(uint8_t& reg, uint8_t code);
+    static void setBit(uint8_t& reg, uint8_t code);
     void op_set(uint8_t code);
     void op_callcond(uint8_t code);
     void call(uint16_t code);
