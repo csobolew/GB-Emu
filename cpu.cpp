@@ -3,22 +3,38 @@
 //
 
 #include "cpu.h"
+#include <iomanip>
 
-void cpu::load(char* argv[]) {
-    FILE* f = fopen("gbb.gb", "rb");
-    if (f == nullptr) {
-        cout << "Couldn't open file";
-        exit(1);
-    }
-    int i = 0;
-    while (fread(&memory[i], 1, 1, f)) {
-        i++;
-    }
-    fclose(f);
-    memory[0xFF44] = 0x90;
-}
 void cpu::log(ofstream& outfile) {
-    outfile << uppercase << hex << "A: " << (int)reg.A << " F: " << (int)reg.F << " B: " << (int)reg.B << " C: " << (int)reg.C << " D: " << (int)reg.D << " E: " << (int)reg.E << " H: " << (int)reg.H << " L: " << (int)reg.L << " SP: " << (int)reg.SP << " PC: " << (int)pc << " (" << (int)memory[pc] << " " << (int)memory[pc+1] << " " << (int)memory[pc+2] << " " << (int)memory[pc+3] << ")" << endl;
+    outfile << "A: ";
+    outfile << setfill('0') << setw(2) << right << hex << uppercase << (int)reg.A;
+    outfile << " F: ";
+    outfile << setfill('0') << setw(2) << right << hex << uppercase << (int)reg.F;
+    outfile << " B: ";
+    outfile << setfill('0') << setw(2) << right << hex << uppercase << (int)reg.B;
+    outfile << " C: ";
+    outfile << setfill('0') << setw(2) << right << hex << uppercase << (int)reg.C;
+    outfile << " D: ";
+    outfile << setfill('0') << setw(2) << right << hex << uppercase << (int)reg.D;
+    outfile << " E: ";
+    outfile << setfill('0') << setw(2) << right << hex << uppercase << (int)reg.E;
+    outfile << " H: ";
+    outfile << setfill('0') << setw(2) << right << hex << uppercase << (int)reg.H;
+    outfile << " L: ";
+    outfile << setfill('0') << setw(2) << right << hex << uppercase << (int)reg.L;
+    outfile << " SP: ";
+    outfile << setfill('0') << setw(4) << right << hex << uppercase << (int)reg.SP;
+    outfile << " PC: 00:";
+    outfile << setfill('0') << setw(4) << right << hex << uppercase << pc;
+    outfile << " (";
+    outfile << setfill('0') << setw(2) << right << hex << uppercase << (int)memory[pc];
+    outfile << " ";
+    outfile << setfill('0') << setw(2) << right << hex << uppercase << (int)memory[pc+1];
+    outfile << " ";
+    outfile << setfill('0') << setw(2) << right << hex << uppercase << (int)memory[pc+2];
+    outfile << " ";
+    outfile << setfill('0') << setw(2) << right << hex << uppercase << (int)memory[pc+3];
+    outfile << ")" << endl;
 }
 void cpu::setZ(uint8_t v) {
     if (v == 1) {
@@ -100,15 +116,18 @@ bool cpu::getCondition(uint8_t code) {
                 return true;
             }
             break;
-        case 0b01:
+        case 0b01: {
             if (getZ() == 1) {
                 return true;
             }
-        case 0b10:
+            break;
+        }
+        case 0b10: {
             if (getC() == 0) {
                 return true;
             }
             break;
+        }
         case 0b11:
             if (getC() == 1) {
                 return true;
@@ -353,7 +372,7 @@ void cpu::op_daa() {
             setC(1);
         }
         if ((getH() == 1) || ((reg.A&0x0F) > 0x09)) {
-            reg.A += 0x60;
+            reg.A += 0x6;
         }
     }
     else {
@@ -361,7 +380,7 @@ void cpu::op_daa() {
             reg.A -= 0x60;
         }
         if (getH() == 1) {
-            reg.A -= 0x60;
+            reg.A -= 0x6;
         }
     }
     if (reg.A == 0) {
@@ -515,7 +534,7 @@ void cpu::op_alusbcA(uint8_t val) {
     setN(1);
 }
 void cpu::op_aluandA(uint8_t val) {
-    reg.A = reg.A & getR8L(val);
+    reg.A = reg.A&getR8L(val);
     if (reg.A == 0) {
         setZ(1);
     }
@@ -864,9 +883,6 @@ void cpu::op_callcond(uint8_t val) {
 }
 void cpu::op_pushr16(uint8_t val) {
     reg.SP--;
-    if (reg.BC == 0x1200) {
-        cout << "hi" << endl;
-    }
     memory[reg.SP--] = get3R16U(val);
     memory[reg.SP] = get3R16L(val);
 }
@@ -912,7 +928,7 @@ void cpu::op_aluadcu8() {
 }
 void cpu::op_alusubu8() {
     uint8_t temp = fetch();
-    setH(((reg.A & 0xf) - (temp & 0xf)) & 0x10);
+    setH(((reg.A & 0xf) - (temp & 0xf)) < 0);
     if (reg.A < temp) {
         setC(1);
     }
@@ -930,7 +946,7 @@ void cpu::op_alusubu8() {
 }
 void cpu::op_alusbcu8() {
     uint8_t temp = fetch();
-    setH(((reg.A & 0xf) - (temp & 0xf) - getC()) & 0x10);
+    setH(((reg.A & 0xf) - (temp & 0xf) - getC()) < 0);
     uint8_t temp2 = getC();
     if (reg.A < (temp + getC())) {
         setC(1);
@@ -949,7 +965,7 @@ void cpu::op_alusbcu8() {
 }
 void cpu::op_aluandu8() {
     uint8_t temp = fetch();
-    reg.A = reg.A & getR8L(temp);
+    reg.A = reg.A&temp;
     if (reg.A == 0) {
         setZ(1);
     }
@@ -995,7 +1011,7 @@ void cpu::op_alucpu8() {
         setZ(0);
     }
     setN(1);
-    setH(((reg.A & 0xf) - (temp & 0xf)) & 0x10);
+    setH(((reg.A & 0xf) - (temp & 0xf)) < 0);
     if (reg.A < temp) {
         setC(1);
     }
@@ -1190,47 +1206,50 @@ void cpu::step() {
                         case 0b000: //JP u16
                             jump16(fetch16());
                             break;
-                        case 0b001: //(CB Prefix)
-                            switch((val&0b11000000) >> 6) {
-                                case 0b00: //Shifts/rotates
-                                    switch((val&0b00111000) >> 3) {
+                        case 0b001:  { //(CB Prefix)
+                            int val2 = fetch();
+                            switch ((val2 & 0b11000000) >> 6) {
+                                case 0b00: //Shifts/rotates {
+                                    switch ((val2 & 0b00111000) >> 3) {
                                         case 0b000: //RLC
-                                            op_rlc(val);
+                                            op_rlc(val2);
                                             break;
                                         case 0b001: //RRC
-                                            op_rrc(val);
+                                            op_rrc(val2);
                                             break;
                                         case 0b010: //RL
-                                            op_rl(val);
+                                            op_rl(val2);
                                             break;
                                         case 0b011: //RR
-                                            op_rr(val);
+                                            op_rr(val2);
                                             break;
                                         case 0b100: //SLA
-                                            op_sla(val);
+                                            op_sla(val2);
                                             break;
                                         case 0b101: //SRA
-                                            op_sra(val);
+                                            op_sra(val2);
                                             break;
                                         case 0b110: //SWAP
-                                            op_swap(val);
+                                            op_swap(val2);
                                             break;
                                         case 0b111: //SRL
-                                            op_srl(val);
+                                            op_srl(val2);
                                             break;
+
                                     }
                                     break;
                                 case 0b01: //BIT bit, r8
-                                    op_bit(val);
+                                    op_bit(val2);
                                     break;
                                 case 0b10: //RES bit, r8
-                                    op_res(val);
+                                    op_res(val2);
                                     break;
                                 case 0b11: //SET bit, r8
-                                    op_set(val);
+                                    op_set(val2);
                                     break;
                             }
                             break;
+                    }
                         case 0b110: //DI
                             op_di();
                             break;
@@ -1263,6 +1282,10 @@ void cpu::step() {
             }
             break;
     }
+    timer();
+}
+void cpu::timer() {
+
 }
 
 cpu::cpu() = default;

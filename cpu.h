@@ -152,9 +152,9 @@ private:
     void op_aluoru8();
     void op_alucpu8();
     void op_aluau8(uint8_t code);
+    void timer();
 public:
     void log(ofstream& outfile);
-    void load(char* argv[]);
     void step();
     cpu();
 };

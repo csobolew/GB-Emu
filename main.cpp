@@ -1,15 +1,10 @@
 //
 // Created by Carson on 8/25/2022.
 //
-#include "cpu.h"
+#include "gb.h"
 int main(int argc, char* argv[]) {
-    cpu game = cpu();
-    ofstream outfile("log.txt");
-    game.load(argv);
-    while(true) {
-        game.log(outfile);
-        game.step();
-    }
+    gb gameboy = gb(argv);
+    gameboy.run();
     cout << "test" << endl;
     return 0;
 }
