@@ -111,6 +111,7 @@ private:
     void timer();
 public:
     void log(ofstream& outfile);
+    void load(char* argv[]);
     void step();
     cpu();
 };

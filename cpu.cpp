@@ -5,6 +5,19 @@
 #include "cpu.h"
 #include <iomanip>
 
+void cpu::load(char* argv[]) {
+    FILE* f = fopen("gbb.gb", "rb");
+    if (f == nullptr) {
+        cout << "Couldn't open file";
+        exit(1);
+    }
+    int i = 0;
+    while (fread(&memory[i], 1, 1, f)) {
+        i++;
+    }
+    fclose(f);
+    memory[0xFF44] = 0x90;
+}
 void cpu::log(ofstream& outfile) {
     outfile << "A: ";
     outfile << setfill('0') << setw(2) << right << hex << uppercase << (int)reg.A;
