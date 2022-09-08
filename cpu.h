@@ -8,53 +8,9 @@
 #include <iostream>
 #include <chrono>
 using namespace std;
-struct registers {
-    registers();
-
-//AF, BC, DE, HL pairings
-    union {
-        struct {
-            uint8_t F = 0xB0;
-            uint8_t A = 0x01;
-        };
-        uint16_t AF;
-    };
-    union {
-        struct {
-            uint8_t C = 0x13;
-            uint8_t B = 0;
-        };
-        uint16_t BC;
-    };
-    union {
-        struct {
-            uint8_t E = 0xD8;
-            uint8_t D = 0;
-        };
-        uint16_t DE;
-    };
-    union {
-        struct {
-            uint8_t L = 0x4D;
-            uint8_t H = 0x01;
-        };
-        uint16_t HL;
-    };
-    union {
-        struct {
-            uint8_t P = 0xFE;
-            uint8_t S = 0xFF;
-        };
-        uint16_t SP;
-    };
-};
 
 class cpu {
 private:
-    registers reg;
-    uint8_t memory[0xFFFF] = {};
-    int pc = 0x100;
-    uint8_t IME = 0;
     uint8_t fetch();
     uint16_t fetch16();
     static bool getBit(uint8_t reg, int num);

@@ -24,6 +24,6 @@ void gb::run() {
    ofstream outfile("log.txt");
     while(true) {
         processor.log(outfile);
-        processor.step(memory);
+        processor.step();
     }
 }
