@@ -203,7 +203,7 @@ uint16_t& cpu::get2R16(uint8_t val) {
             exit(23);
     }
 }
-uint8_t& cpu::getR8(uint8_t val) {
+uint8_t cpu::getR8(uint8_t val) {
     switch((val&0b00111000) >> 3) {
         case 0b000:
             return reg.B;
@@ -218,7 +218,7 @@ uint8_t& cpu::getR8(uint8_t val) {
         case 0b101:
             return reg.L;
         case 0b110:
-            return mem->dangerousrefMem(reg.HL);
+            return mem->readMem(reg.HL);
         case 0b111:
             return reg.A;
         default:
@@ -226,7 +226,38 @@ uint8_t& cpu::getR8(uint8_t val) {
             exit(24);
     }
 }
-uint8_t& cpu::getR8L(uint8_t val) {
+void cpu::getR8Write(uint8_t val, uint8_t value) {
+    switch((val&0b00111000) >> 3) {
+        case 0b000:
+            reg.B = value;
+            break;
+        case 0b001:
+            reg.C = value;
+            break;
+        case 0b010:
+            reg.D = value;
+            break;
+        case 0b011:
+            reg.E = value;
+            break;
+        case 0b100:
+            reg.H = value;
+            break;
+        case 0b101:
+            reg.L = value;
+            break;
+        case 0b110:
+            mem->writeMem(reg.HL, value);
+            break;
+        case 0b111:
+            reg.A = value;
+            break;
+        default:
+            cout << "Unknown r8" << endl;
+            exit(24);
+    }
+}
+uint8_t cpu::getR8L(uint8_t val) {
     switch(val&0b00000111) {
         case 0b000:
             return reg.B;
@@ -241,12 +272,43 @@ uint8_t& cpu::getR8L(uint8_t val) {
         case 0b101:
             return reg.L;
         case 0b110:
-            return mem->dangerousrefMem(reg.HL);
+            return mem->readMem(reg.HL);
         case 0b111:
             return reg.A;
         default:
             cout << "Unknown r8" << endl;
             exit(25);
+    }
+}
+void cpu::getR8LWrite(uint8_t val, uint8_t value) {
+    switch(val&0b00000111) {
+        case 0b000:
+            reg.B = value;
+            break;
+        case 0b001:
+            reg.C = value;
+            break;
+        case 0b010:
+            reg.D = value;
+            break;
+        case 0b011:
+            reg.E = value;
+            break;
+        case 0b100:
+            reg.H = value;
+            break;
+        case 0b101:
+            reg.L = value;
+            break;
+        case 0b110:
+            mem->writeMem(reg.HL, value);
+            break;
+        case 0b111:
+            reg.A = value;
+            break;
+        default:
+            cout << "Unknown r8" << endl;
+            exit(24);
     }
 }
 void cpu::op_ldr16u16(uint8_t val) {
@@ -291,7 +353,7 @@ void cpu::op_DECr16(uint8_t val) {
 }
 void cpu::op_INCr8(uint8_t val) {
     setH(((getR8(val) & 0xF) + (1 & 0xF)) > 0xF);
-    getR8(val)++;
+    getR8Write(val, getR8(val)+1);
     setN(0);
     if (getR8(val) == 0) {
         setZ(1);
@@ -302,7 +364,7 @@ void cpu::op_INCr8(uint8_t val) {
 }
 void cpu::op_DECr8(uint8_t val) {
     setH(((getR8(val) & 0xf) - (1 & 0xf)) < 0);
-    getR8(val)--;
+    getR8Write(val, getR8(val)-1);
     setN(1);
     if (getR8(val) == 0) {
         setZ(1);
@@ -312,10 +374,10 @@ void cpu::op_DECr8(uint8_t val) {
     }
 }
 void cpu::op_ldr8u8(uint8_t val) {
-    getR8(val) = fetch();
+    getR8Write(val, fetch());
 }
 void cpu::op_ldr8r8(uint8_t val) {
-    getR8(val) = getR8L(val);
+    getR8Write(val, getR8L(val));
 }
 void cpu::op_group1(uint8_t val) {
     switch((val&0b00111000) >> 3) {
@@ -681,9 +743,9 @@ void cpu::op_ei() {
 }
 void cpu::op_rlc(uint8_t val) {
     uint8_t temp = (getR8L(val) & 0x80) >> 7;
-    getR8L(val) = getR8L(val) << 1;
+    getR8LWrite(val, getR8L(val) << 1);
     if (temp == 1) {
-        getR8L(val) = getR8L(val) | 0x1;
+        getR8LWrite(val, getR8L(val) | 0x1);
     }
     setN(0);
     setH(0);
@@ -697,9 +759,9 @@ void cpu::op_rlc(uint8_t val) {
 }
 void cpu::op_rl(uint8_t val) {
     uint8_t temp = (getR8L(val) & 0x80) >> 7;
-    getR8L(val) = getR8L(val) << 1;
+    getR8LWrite(val, getR8L(val) << 1);
     if (getC() == 1) {
-        getR8L(val) = getR8L(val) | 0x1;
+        getR8LWrite(val, getR8L(val) | 0x1);
     }
     setN(0);
     setH(0);
@@ -713,9 +775,9 @@ void cpu::op_rl(uint8_t val) {
 }
 void cpu::op_rr(uint8_t val) {
     uint8_t temp = (getR8L(val) & 0x1);
-    getR8L(val) = getR8L(val) >> 1;
+    getR8LWrite(val, getR8L(val) >> 1);
     if (getC() == 1) {
-        getR8L(val) = getR8L(val) | 0b10000000;
+        getR8LWrite(val, getR8L(val) | 0b10000000);
     }
     setN(0);
     setH(0);
@@ -729,9 +791,9 @@ void cpu::op_rr(uint8_t val) {
 }
 void cpu::op_rrc(uint8_t val) {
     uint8_t temp = (getR8L(val) & 0x1);
-    getR8L(val) = getR8L(val) >> 1;
+    getR8LWrite(val, getR8L(val) >> 1);
     if (temp == 1) {
-        getR8L(val) = getR8L(val) | 0b10000000;
+        getR8LWrite(val, getR8L(val) | 0b10000000);
     }
     setN(0);
     setH(0);
@@ -745,7 +807,7 @@ void cpu::op_rrc(uint8_t val) {
 }
 void cpu::op_sla(uint8_t val) {
     setC(getR8L(val)&0b10000000 >> 7);
-    getR8L(val) = getR8L(val) << 1;
+    getR8LWrite(val, getR8L(val) << 1);
     setH(0);
     setN(0);
     if (getR8L(val) == 0) {
@@ -757,9 +819,9 @@ void cpu::op_sla(uint8_t val) {
 }
 void cpu::op_sra(uint8_t val) {
     setC(getR8L(val)&0b00000001);
-    getR8L(val) = getR8L(val) >> 1;
+    getR8LWrite(val, getR8L(val) >> 1);
     if (((getR8L(val)&0b01000000) >> 6 == 1)) {
-        getR8L(val) = getR8L(val) | 0b10000000;
+        getR8LWrite(val, getR8L(val) | 0b10000000);
     }
     setH(0);
     setN(0);
@@ -772,7 +834,7 @@ void cpu::op_sra(uint8_t val) {
 }
 void cpu::op_srl(uint8_t val) {
     setC(getR8L(val)&0b00000001);
-    getR8L(val) = getR8L(val) >> 1;
+    getR8LWrite(val, getR8L(val) >> 1);
     setH(0);
     setN(0);
     if (getR8L(val) == 0) {
@@ -784,7 +846,7 @@ void cpu::op_srl(uint8_t val) {
 }
 void cpu::op_swap(uint8_t val) {
     uint8_t temp = getR8L(val);
-    getR8L(val) = ((temp&0b00001111)<<4) | (temp>>4);
+    getR8LWrite(val, ((temp&0b00001111)<<4) | (temp>>4));
     if (getR8L(val) == 0) {
         setZ(1);
     }
@@ -800,73 +862,57 @@ void cpu::op_bit(uint8_t val) {
     setN(0);
     setH(1);
 }
-void cpu::resetBit(uint8_t& regi, uint8_t num) {
+uint8_t cpu::resetBit(uint8_t regi, uint8_t num) {
     switch(num) {
         case 0:
-            regi = regi&0b11111110;
-            break;
+            return regi&0b11111110;
         case 1:
-            regi = regi&0b11111101;
-            break;
+            return regi&0b11111101;
         case 2:
-            regi = regi&0b11111011;
-            break;
+            return regi&0b11111011;
         case 3:
-            regi = regi&0b11110111;
-            break;
+            return regi&0b11110111;
         case 4:
-            regi = regi&0b11101111;
-            break;
+            return regi&0b11101111;
         case 5:
-            regi = regi&0b11011111;
-            break;
+            return regi&0b11011111;
         case 6:
-            regi = regi&0b10111111;
-            break;
+            return regi&0b10111111;
         case 7:
-            regi = regi&0b01111111;
-            break;
+            return regi&0b01111111;
         default:
             cout << "Unknown bit" << endl;
             exit(30);
     }
 }
 void cpu::op_res(uint8_t val) {
-    resetBit(getR8L(val), ((val&0b00111000) >> 3));
+    getR8LWrite(val, resetBit(getR8L(val), ((val&0b00111000) >> 3)));
 }
-void cpu::setBit(uint8_t& regi, uint8_t num) {
+uint8_t cpu::setBit(uint8_t regi, uint8_t num) {
     switch(num) {
         case 0:
-            regi = regi | 0b00000001;
-            break;
+            return regi | 0b00000001;
         case 1:
-            regi = regi | 0b00000010;
-            break;
+            return regi | 0b00000010;
         case 2:
-            regi = regi | 0b00000100;
-            break;
+            return regi | 0b00000100;
         case 3:
-            regi = regi | 0b00001000;
-            break;
+            return regi | 0b00001000;
         case 4:
-            regi = regi | 0b00010000;
-            break;
+            return regi | 0b00010000;
         case 5:
-            regi = regi | 0b00100000;
-            break;
+            return regi | 0b00100000;
         case 6:
-            regi = regi | 0b01000000;
-            break;
+            return regi | 0b01000000;
         case 7:
-            regi = regi | 0b10000000;
-            break;
+            return regi | 0b10000000;
         default:
             cout << "Unknown bit" << endl;
             exit(31);
     }
 }
 void cpu::op_set(uint8_t val) {
-    setBit(getR8L(val), ((val&0b00111000) >> 3));
+    getR8LWrite(val, setBit(getR8L(val), ((val&0b00111000) >> 3)));
 }
 void cpu::call(uint16_t val) {
     uint16_t temp = val;

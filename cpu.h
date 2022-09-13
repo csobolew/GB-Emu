@@ -74,8 +74,10 @@ private:
     uint8_t& get1R16U(uint8_t code);
     uint16_t& get1R16(uint8_t code);
     uint16_t& get2R16(uint8_t code);
-    uint8_t& getR8(uint8_t code);
-    uint8_t& getR8L(uint8_t code);
+    uint8_t getR8(uint8_t code);
+    void getR8Write(uint8_t code, uint8_t val);
+    void getR8LWrite(uint8_t code, uint8_t val);
+    uint8_t getR8L(uint8_t code);
     void op_jumpRelCond(uint8_t code);
     void op_addHLr16(uint8_t code);
     void op_LDu16SP ();
@@ -136,8 +138,8 @@ private:
     void op_swap(uint8_t code);
     void op_bit(uint8_t code);
     void op_res(uint8_t code);
-    static void resetBit(uint8_t& reg, uint8_t code);
-    static void setBit(uint8_t& reg, uint8_t code);
+    static uint8_t resetBit(uint8_t reg, uint8_t code);
+    static uint8_t setBit(uint8_t reg, uint8_t code);
     void op_set(uint8_t code);
     void op_callcond(uint8_t code);
     void call(uint16_t code);
