@@ -5,7 +5,7 @@
 #include "mmu.h"
 uint8_t mmu::readMem(uint16_t addr) {
     return memory[addr];
-};
+}
 void mmu::writeMem(uint16_t addr, uint8_t val) {
     memory[addr] = val;
 }
