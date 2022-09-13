@@ -5,19 +5,6 @@
 #include "cpu.h"
 #include <iomanip>
 
-void cpu::load(char* argv[]) {
-    FILE* f = fopen("gbb.gb", "rb");
-    if (f == nullptr) {
-        cout << "Couldn't open file";
-        exit(1);
-    }
-    int i = 0;
-    while (fread(&memory[i], 1, 1, f)) {
-        i++;
-    }
-    fclose(f);
-    memory[0xFF44] = 0x90;
-}
 void cpu::log(ofstream& outfile) {
     outfile << "A: ";
     outfile << setfill('0') << setw(2) << right << hex << uppercase << (int)reg.A;
@@ -40,13 +27,13 @@ void cpu::log(ofstream& outfile) {
     outfile << " PC: 00:";
     outfile << setfill('0') << setw(4) << right << hex << uppercase << pc;
     outfile << " (";
-    outfile << setfill('0') << setw(2) << right << hex << uppercase << (int)memory[pc];
+    outfile << setfill('0') << setw(2) << right << hex << uppercase << (int)mem->readMem(pc);
     outfile << " ";
-    outfile << setfill('0') << setw(2) << right << hex << uppercase << (int)memory[pc+1];
+    outfile << setfill('0') << setw(2) << right << hex << uppercase << (int)mem->readMem(pc+1);
     outfile << " ";
-    outfile << setfill('0') << setw(2) << right << hex << uppercase << (int)memory[pc+2];
+    outfile << setfill('0') << setw(2) << right << hex << uppercase << (int)mem->readMem(pc+2);
     outfile << " ";
-    outfile << setfill('0') << setw(2) << right << hex << uppercase << (int)memory[pc+3];
+    outfile << setfill('0') << setw(2) << right << hex << uppercase << (int)mem->readMem(pc+3);
     outfile << ")" << endl;
 }
 void cpu::setZ(uint8_t v) {
@@ -95,12 +82,12 @@ uint8_t cpu::getC() const {
     return (reg.F>>4)&0x1;
 }
 uint8_t cpu::fetch() {
-    uint8_t temp = memory[pc];
+    uint8_t temp = mem->readMem(pc);
     pc++;
     return temp;
 }
 int8_t cpu::fetchSigned() {
-    auto temp = (int8_t)memory[pc];
+    auto temp = (int8_t)mem->readMem(pc);
     pc++;
     return temp;
 }
@@ -115,8 +102,8 @@ bool cpu::getBit(uint8_t regi, int num) {
 }
 void cpu::op_LDu16SP() {
     uint16_t val = fetch16();
-    memory[val] = reg.P;
-    memory[val+1] = reg.S;
+    mem->writeMem(val, reg.P);
+    mem->writeMem(val+1, reg.S);
 }
 void cpu::op_jumpRel(int8_t val) {
     pc += val;
@@ -231,7 +218,7 @@ uint8_t& cpu::getR8(uint8_t val) {
         case 0b101:
             return reg.L;
         case 0b110:
-            return memory[reg.HL];
+            return mem->dangerousrefMem(reg.HL);
         case 0b111:
             return reg.A;
         default:
@@ -254,7 +241,7 @@ uint8_t& cpu::getR8L(uint8_t val) {
         case 0b101:
             return reg.L;
         case 0b110:
-            return memory[reg.HL];
+            return mem->dangerousrefMem(reg.HL);
         case 0b111:
             return reg.A;
         default:
@@ -279,7 +266,7 @@ void cpu::op_addHLr16(uint8_t val) {
 
 }
 void cpu::op_ldr16A(uint8_t val) {
-    memory[get2R16(val)] = reg.A;
+    mem->writeMem(get2R16(val), reg.A);
     if (((val&0b00110000) >> 4) == 0b10) {
         reg.HL++;
     }
@@ -288,7 +275,7 @@ void cpu::op_ldr16A(uint8_t val) {
     }
 }
 void cpu::op_ldAr16(uint8_t val) {
-    reg.A = memory[get2R16(val)];
+    reg.A = mem->readMem(get2R16(val));
     if (((val&0b00110000) >> 4) == 0b10) {
         reg.HL++;
     }
@@ -599,8 +586,8 @@ void cpu::op_alucpA(uint8_t val) {
     }
 }
 void cpu::returnStack() {
-    uint8_t temp1 = memory[reg.SP++];
-    uint8_t temp2 = memory[reg.SP++];
+    uint8_t temp1 = mem->readMem(reg.SP++);
+    uint8_t temp2 = mem->readMem(reg.SP++);
     pc = (((uint16_t)temp2 << 8) | temp1);
 }
 void cpu::op_retcond(uint8_t val) {
@@ -609,13 +596,13 @@ void cpu::op_retcond(uint8_t val) {
     }
 }
 void cpu::op_ldffuA() {
-    memory[0xFF00+fetch()] = reg.A;
+    mem->writeMem(0xFF00+fetch(), reg.A);
 }
 void cpu::op_addspi8() {
     reg.SP += fetchSigned();
 }
 void cpu::op_ldAffu() {
-    reg.A = memory[0xFF00+fetch()];
+    reg.A = mem->readMem(0xFF00+fetch());
 }
 void cpu::op_ldhlspi() {
     reg.HL = reg.SP + fetchSigned();
@@ -651,8 +638,8 @@ uint8_t& cpu::get3R16U(uint8_t val) {
     }
 }
 void cpu::op_popr16(uint8_t val) {
-    get3R16L(val) = memory[reg.SP++];
-    get3R16U(val) = memory[reg.SP++];
+    get3R16L(val) = mem->readMem(reg.SP++);
+    get3R16U(val) = mem->readMem(reg.SP++);
     reg.F = reg.F&0xF0;
 }
 void cpu::op_reti() {
@@ -666,16 +653,16 @@ void cpu::op_ldsphl() {
     reg.SP = reg.HL;
 }
 void cpu::op_ldffcA() {
-    memory[0xFF00+reg.C] = reg.A;
+    mem->writeMem(0xFF00+reg.C, reg.A);
 }
 void cpu::op_ldAffc() {
-    reg.A = memory[0xFF00+reg.C];
+    reg.A = mem->readMem(0xFF00+reg.C);
 }
 void cpu::op_ldu16A() {
-    memory[fetch16()] = reg.A;
+    mem->writeMem(fetch16(), reg.A);
 }
 void cpu::op_ldAu16() {
-    reg.A = memory[fetch16()];
+    reg.A = mem->readMem(fetch16());
 }
 void cpu::jump16(uint16_t val) {
     pc = val;
@@ -884,8 +871,8 @@ void cpu::op_set(uint8_t val) {
 void cpu::call(uint16_t val) {
     uint16_t temp = val;
     reg.SP--;
-    memory[reg.SP--] = pc >> 8;
-    memory[reg.SP] = pc&0x00FF;
+    mem->writeMem(reg.SP--, pc >> 8);
+    mem->writeMem(reg.SP, pc&0x00FF);
     pc = temp;
 }
 void cpu::op_callcond(uint8_t val) {
@@ -896,8 +883,8 @@ void cpu::op_callcond(uint8_t val) {
 }
 void cpu::op_pushr16(uint8_t val) {
     reg.SP--;
-    memory[reg.SP--] = get3R16U(val);
-    memory[reg.SP] = get3R16L(val);
+    mem->writeMem(reg.SP--, get3R16U(val));
+    mem->writeMem(reg.SP, get3R16L(val));
 }
 void cpu::op_callu16() {
     call(fetch16());
@@ -1061,10 +1048,10 @@ void cpu::op_aluau8(uint8_t val) {
     }
 }
 void cpu::step() {
-    if (memory[0xff02] == 0x81) {
-        char c = memory[0xff01];
+    if (mem->readMem(0xff02) == 0x81) {
+        char c = mem->readMem(0xff01);
         printf("%c", c);
-        memory[0xff02] = 0x0;
+        mem->writeMem(0xff02, 0x0);
     }
         uint8_t val = fetch();
     switch((val&0b11000000) >> 6) { //First 2
@@ -1301,6 +1288,8 @@ void cpu::timer() {
 
 }
 
-cpu::cpu() = default;
-
 registers::registers() {}
+
+cpu::cpu(mmu& memory) : mem(&memory) {
+
+}
