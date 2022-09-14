@@ -13,9 +13,8 @@ class cpu;
 class gb {
 private:
     mmu mem;
-
+    int cycles;
     cpu processor = cpu(mem);
-
     timer tim = timer(mem);
 
 public:

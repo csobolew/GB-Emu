@@ -9,10 +9,9 @@
 class timer {
 private:
     int clockspeed = 4194304;
-    int frequency = 4096;
     mmu* mem;
-    int timerCounter = clockspeed/frequency;
-    void updateFreq();
+    int timerCounter = clockspeed / 4096;
+    int dividerCounter = 0;
 public:
     void updateTimer(int cycles);
     timer(mmu& memory);

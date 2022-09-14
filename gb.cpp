@@ -9,9 +9,14 @@ gb::gb(char* argv[]) {
 void gb::run() {
    ofstream outfile("log.txt");
     while(true) {
-        processor.checkInterrupts();
         processor.log(outfile);
-        int cycles = processor.step();
+        if(processor.getHalted()) {
+            cycles = 0;
+        }
+        else {
+            cycles = processor.step();
+        }
         tim.updateTimer(cycles);
+        processor.checkInterrupts();
     }
 }

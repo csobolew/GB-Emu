@@ -53,18 +53,20 @@ class cpu {
 private:
     registers reg;
     mmu* mem;
+    bool halt = false;
     bool IME = false;
     int pc = 0x100;
     uint8_t fetch();
     uint16_t fetch16();
     static bool getBit(uint8_t reg, int num);
-    void setZ(uint8_t v);
+    void setZ(bool v);
     uint8_t getZ() const;
-    void setN(uint8_t v);
+    void setN(bool v);
     uint8_t getN() const;
-    void setH(uint8_t v);
+    void setH(bool v);
     uint8_t getH() const;
-    void setC(uint8_t v);
+    int cycleTotal = 0;
+    void setC(bool v);
     uint8_t getC() const;
     int8_t fetchSigned();
 
@@ -163,7 +165,8 @@ public:
     void log(ofstream& outfile);
     int step();
     void checkInterrupts();
-    int getPC();
+    int getPC() const;
+    bool getHalted();
     cpu(mmu& memory);
 };
 
