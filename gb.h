@@ -7,15 +7,16 @@
 
 #include "mmu.h"
 #include "cpu.h"
+#include "timer.h"
 class cpu;
 
 class gb {
 private:
     mmu mem;
-    friend class mmu;
 
     cpu processor = cpu(mem);
-    friend class cpu;
+
+    timer tim = timer(mem);
 
 public:
     void run();

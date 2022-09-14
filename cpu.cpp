@@ -664,10 +664,21 @@ void cpu::op_addspi8() {
     reg.SP += fetchSigned();
 }
 void cpu::op_ldAffu() {
-    reg.A = mem->readMem(0xFF00+fetch());
+    uint8_t temp = fetch();
+    reg.A = mem->readMem(0xFF00+temp);
+}
+int cpu::getPC() {
+    return pc;
 }
 void cpu::op_ldhlspi() {
-    reg.HL = reg.SP + fetchSigned();
+    int8_t temp = fetchSigned();
+    if (reg.SP + temp > 0xFF) {
+        setC(1);
+    }
+    setZ(0);
+    setN(0);
+    setH(((reg.SP & 0xf) + (temp & 0xf)) > 0xf);
+    reg.HL = reg.SP + temp;
 }
 uint8_t& cpu::get3R16L(uint8_t val) {
     switch((val&0b00110000) >> 4) {
@@ -736,10 +747,10 @@ void cpu::op_jpcond(uint8_t val) {
     }
 }
 void cpu::op_di() {
-    IME = 0;
+    IME = false;
 }
 void cpu::op_ei() {
-    IME = 1;
+    IME = true;
 }
 void cpu::op_rlc(uint8_t val) {
     uint8_t temp = (getR8L(val) & 0x80) >> 7;
@@ -1093,7 +1104,63 @@ void cpu::op_aluau8(uint8_t val) {
             break;
     }
 }
-void cpu::step() {
+void cpu::int_vblank() {
+    IME = false;
+    mem->writeMem(0xff0f, mem->readMem(0xff0f)&0b11111110);
+    //Two NOP cycles
+    call(0x40);
+}
+void cpu::int_lcd() {
+    IME = false;
+    mem->writeMem(0xff0f, mem->readMem(0xff0f)&0b11111101);
+    call(0x48);
+}
+void cpu::int_timer() {
+    IME = false;
+    mem->writeMem(0xff0f, mem->readMem(0xff0f)&0b11111011);
+    call(0x50);
+}
+void cpu::int_serial() {
+    IME = false;
+    mem->writeMem(0xff0f, mem->readMem(0xff0f)&0b11110111);
+    call(0x58);
+}
+void cpu::int_joypad() {
+    IME = false;
+    mem->writeMem(0xff0f, mem->readMem(0xff0f)&0b11101111);
+    call(0x60);
+}
+void cpu::checkInterrupts() {
+    while(IME && mem->readMem(0xff0f) != 0) {
+            if ((mem->readMem(0xff0f) & 0b00001) == 0b00001) { //VBLANK
+                if ((mem->readMem(0xffff) & 0b00001) == 0b00001) {
+                    int_vblank();
+                }
+            }
+            if ((mem->readMem(0xff0f) & 0b00010) == 0b00010) { //LCD STAT
+                if ((mem->readMem(0xffff) & 0b00010) == 0b00010) {
+                    int_lcd();
+                }
+            }
+            if ((mem->readMem(0xff0f) & 0b00100) == 0b00100) { //Timer
+                if ((mem->readMem(0xffff) & 0b00100) == 0b00100) {
+                    int_timer();
+                }
+            }
+            if ((mem->readMem(0xff0f) & 0b01000) == 0b01000) { //Serial
+                if ((mem->readMem(0xffff) & 0b01000) == 0b01000) {
+                    int_serial();
+                }
+            }
+            if ((mem->readMem(0xff0f) & 0b10000) == 0b10000) { //Joypad
+                if ((mem->readMem(0xffff) & 0b10000) == 0b10000) {
+                    int_joypad();
+                }
+            }
+    }
+}
+int cpu::step() {
+    int cycleTotal = 0;
     if (mem->readMem(0xff02) == 0x81) {
         char c = mem->readMem(0xff01);
         printf("%c", c);
@@ -1328,10 +1395,7 @@ void cpu::step() {
             }
             break;
     }
-    timer();
-}
-void cpu::timer() {
-
+   return cycleTotal;
 }
 
 registers::registers() {}

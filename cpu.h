@@ -53,7 +53,7 @@ class cpu {
 private:
     registers reg;
     mmu* mem;
-    uint8_t IME = 0;
+    bool IME = false;
     int pc = 0x100;
     uint8_t fetch();
     uint16_t fetch16();
@@ -81,6 +81,11 @@ private:
     void op_jumpRelCond(uint8_t code);
     void op_addHLr16(uint8_t code);
     void op_LDu16SP ();
+    void int_vblank();
+    void int_lcd();
+    void int_serial();
+    void int_joypad();
+    void int_timer();
     bool getCondition(uint8_t code);
     void op_ldr16A(uint8_t code);
     void op_ldAr16(uint8_t code);
@@ -154,10 +159,11 @@ private:
     void op_aluoru8();
     void op_alucpu8();
     void op_aluau8(uint8_t code);
-    void timer();
 public:
     void log(ofstream& outfile);
-    void step();
+    int step();
+    void checkInterrupts();
+    int getPC();
     cpu(mmu& memory);
 };
 
