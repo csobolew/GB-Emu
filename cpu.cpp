@@ -1187,34 +1187,25 @@ void cpu::int_joypad() {
     call(0x60);
 }
 void cpu::checkInterrupts() {
-    if (mem->readMem(0xff0f) != 0) {
+    if ((mem->readMem(0xff0f)&mem->readMem(0xffff)) != 0) {
         halt = false;
     }
-    while(IME && mem->readMem(0xff0f) != 0) {
-            if ((mem->readMem(0xff0f) & 0b00001) == 0b00001) { //VBLANK
-                if ((mem->readMem(0xffff) & 0b00001) == 0b00001) {
+    if(IME && (mem->readMem(0xff0f) != 0)) {
+            uint8_t temp = (mem->readMem(0xff0f)&mem->readMem(0xffff));
+            if ((temp&0b00001) == 0b00001) { //VBLANK
                     int_vblank();
-                }
             }
-            if ((mem->readMem(0xff0f) & 0b00010) == 0b00010) { //LCD STAT
-                if ((mem->readMem(0xffff) & 0b00010) == 0b00010) {
+            else if ((temp&0b00010) == 0b00010) { //LCD STAT
                     int_lcd();
-                }
             }
-            if ((mem->readMem(0xff0f) & 0b00100) == 0b00100) { //Timer
-                if ((mem->readMem(0xffff) & 0b00100) == 0b00100) {
+            else if ((temp&0b00100) == 0b00100) { //Timer
                     int_timer();
-                }
             }
-            if ((mem->readMem(0xff0f) & 0b01000) == 0b01000) { //Serial
-                if ((mem->readMem(0xffff) & 0b01000) == 0b01000) {
+            else if ((temp&0b01000) == 0b01000) { //Serial
                     int_serial();
-                }
             }
-            if ((mem->readMem(0xff0f) & 0b10000) == 0b10000) { //Joypad
-                if ((mem->readMem(0xffff) & 0b10000) == 0b10000) {
+            else if ((temp&0b10000) == 0b10000) { //Joypad
                     int_joypad();
-                }
             }
     }
 }

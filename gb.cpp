@@ -11,7 +11,7 @@ void gb::run() {
     while(true) {
         processor.log(outfile);
         if(processor.getHalted()) {
-            cycles = 0;
+            cycles = 4;
         }
         else {
             cycles = processor.step();

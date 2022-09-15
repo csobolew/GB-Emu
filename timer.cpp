@@ -6,26 +6,26 @@
 void timer::updateTimer(int cycles) {
     if ((mem->readMem(0xFF07) & 0b100) == 0b100) { //Timer enabled
         timerCounter -= cycles;
-        if (timerCounter <= 0) {
+        while (timerCounter <= 0) {
             int frequency = 4096;
-            timerCounter = clockspeed / frequency;
-            if (mem->readMem(0xFF07 & 0b11) == 0b01) {
-                frequency = 262144;
-                timerCounter = clockspeed / frequency;
-            } else if (mem->readMem(0xFF07 & 0b11) == 0b10) {
-                frequency = 65536;
-                timerCounter = clockspeed / frequency;
-            } else if (mem->readMem(0xFF07 & 0b11) == 0b11) {
-                frequency = 16384;
-                timerCounter = clockspeed / frequency;
-            }
 
-            if (mem->readMem(0xFF05) == 255) {
+            if ((mem->readMem(0xFF07) & 0b11) == 0b01) {
+                frequency = 262144;
+            }
+            else if ((mem->readMem(0xFF07) & 0b11) == 0b10) {
+                frequency = 65536;
+            }
+            else if ((mem->readMem(0xFF07) & 0b11) == 0b11) {
+                frequency = 16384;
+            }
+            if (mem->readMem(0xFF05) == 0xFF) {
                 mem->writeMem(0xFF05, mem->readMem(0xFF06)); //Reset counter
                 mem->writeMem(0xFF0F, mem->readMem(0xFF0F) | 0b00100); //Request interrupt
-            } else {
+            }
+            else {
                 mem->writeMem(0xFF05, mem->readMem(0xFF05) + 1);
             }
+            timerCounter += clockspeed/frequency;
         }
     }
 }
