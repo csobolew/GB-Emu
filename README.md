@@ -1,2 +1,3 @@
 # GB-Emu
-Basic C++ Gameboy Emulator, currently only runs bootrom with no graphics.
+Basic C++ Gameboy Emulator, WIP.
+No graphical implementation, but has pretty accurate CPU emulation.
