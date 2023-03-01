@@ -16,4 +16,4 @@ jobs:
         username: ${{ secrets.SSH_USER }}
         key: ${{ secrets.PRIVATE_KEY }}
         source: "gb.h"
-        target: "gb.h"
+        target: ""
