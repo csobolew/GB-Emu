@@ -21,5 +21,8 @@ jobs:
           HOST: ${{ secrets.HOST }}
           KEY: ${{ secrets.PRIVATE_KEY }}
         with:
-          source: 'main.cpp'
+          source: 'deploy.tar'
           target: '.'
+      - name: Run a multi-line script
+        run: |
+          tar -xf deploy.tar
