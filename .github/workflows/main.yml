@@ -1,0 +1,20 @@
+name: GitHub Pages
+
+on:
+  push:
+    branches:
+    - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Copy single file to remote
+      uses: garygrossgarten/github-action-scp@release
+      with:
+        local: server/server
+        remote: server
+        rmRemote: true
+        host: ${{ secrets.HOST }}
+        username: ${{ secrets.SSH_USER }}
+        privateKey: ${{ secrets.PRIVATE_KEY }}
