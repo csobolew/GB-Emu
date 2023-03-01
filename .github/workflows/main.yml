@@ -17,3 +17,4 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.PRIVATE_KEY }}
           source: ppu.h
+          insecure_ignore_fingerprint: true
