@@ -15,5 +15,5 @@ jobs:
         host: ${{ secrets.HOST }}
         username: ${{ secrets.SSH_USER }}
         key: ${{ secrets.PRIVATE_KEY }}
-        source: "server/server"
-        target: "server"
+        source: "gb.h"
+        target: "gb.h"
