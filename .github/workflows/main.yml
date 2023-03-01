@@ -23,15 +23,13 @@ jobs:
         with:
           source: 'deploy.tar'
           target: '.'
-          
-      - name: Execute SSH commmands on remote server
-        uses: JimCronqvist/action-ssh@master
+      - name: Extract files
+        uses: appleboy/ssh-action@v0.1.8
         env:
-          NAME: "Root"
+          USERNAME: ${{ secrets.SSH_USER }}
+          HOST: ${{ secrets.HOST }}
+          KEY: ${{ secrets.PRIVATE_KEY }}
         with:
-          hosts: ${{ format('{0}@{1}:22', secrets.SSH_USER, secrets.HOST) }}
-          privateKey: ${{ secrets.PRIVATE_KEY }}
-          debug: false
-          command: |
+          script: |
             tar -xf deploy.tar
-            echo "I am $NAME"
+            ls -al
