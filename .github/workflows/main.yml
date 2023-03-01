@@ -23,6 +23,15 @@ jobs:
         with:
           source: 'deploy.tar'
           target: '.'
-      - name: Run a multi-line script
-        run: |
-          tar -xf deploy.tar
+          
+      - name: Execute SSH commmands on remote server
+        uses: JimCronqvist/action-ssh@master
+        env:
+          NAME: "Root"
+        with:
+          hosts: format('{0}@{1}:22', secrets.SSH_USER, secrets.HOST)
+          privateKey: ${{ secrets.PRIVATE_KEY }}
+          debug: false
+          command: |
+            tar -xf deploy.tar
+            echo "I am $NAME"
