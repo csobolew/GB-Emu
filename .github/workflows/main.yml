@@ -29,7 +29,7 @@ jobs:
         env:
           NAME: "Root"
         with:
-          hosts: format('{0}@{1}:22', secrets.SSH_USER, secrets.HOST)
+          hosts: ${{ format('{0}@{1}:22', secrets.SSH_USER, secrets.HOST) }}
           privateKey: ${{ secrets.PRIVATE_KEY }}
           debug: false
           command: |
