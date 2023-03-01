@@ -11,9 +11,7 @@ jobs:
     steps:
       - name: Run a multi-line script
         run: |
-          mkdir ../build
-          cp -TR . ../build
-          tar -cvf deploy.tar ../build/
+          tar -cvf deploy.tar main.cpp
       - name: SCP files via ssh key
         uses: appleboy/scp-action@master
         env:
