@@ -9,11 +9,11 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-    - name: copy file via ssh password
-      uses: appleboy/scp-action@master
-      with:
-        host: ${{ secrets.HOST }}
-        username: ${{ secrets.SSH_USER }}
-        key: ${{ secrets.PRIVATE_KEY }}
-        source: "gb.h"
-        target: ""
+      - name: Upload file via SSH
+        uses: nicklasfrahm/scp-action@main
+        with:
+          direction: upload
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.PRIVATE_KEY }}
+          source: ppu.h
